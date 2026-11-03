@@ -81,28 +81,52 @@
         .w-base { width: 3.2rem; }
         .h-base { height: 3.2rem; }
         .h-double { height: calc(6.4rem + 0.5rem); } /* 两个按键高度 + 间距 */
+
+        /* Keep wide hardware layouts scrollable without hiding their leading keys. */
+        .keyboard-scroll { flex: 0 0 auto; }
+        #keyboard-container { margin-inline: auto; flex-shrink: 0; }
+        #keyboard-container:focus-visible { outline: 2px solid #2563eb; outline-offset: -2px; }
+        .app-header > div:first-child { min-width: 0; }
+        .app-controls { flex-shrink: 0; }
+        .app-header h1 svg { flex-shrink: 0; }
+        .capture-hint { margin: 8px 0 0; font-size: 12px; color: #6b7280; }
+        @media (max-width: 1100px) {
+            .app-header { flex-wrap: wrap; gap: 20px; }
+            .app-controls { width: 100%; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+        }
+        @media (max-width: 600px) {
+            .app-header { padding: 20px 16px; }
+            .app-header h1 { font-size: 20px; line-height: 1.4; }
+            .app-controls > div:first-child { padding-right: 0; border-right: 0; }
+            .app-controls > div:nth-child(2) { align-items: flex-start; }
+            #reset-btn { margin-left: auto; }
+            main { padding: 16px !important; gap: 20px !important; }
+            main .data-panels { flex-direction: column; height: auto; }
+            .data-panels > div { width: 100%; height: 256px; flex-shrink: 0; }
+        }
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 h-screen flex flex-col overflow-hidden transition-colors duration-200">
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen flex flex-col overflow-x-hidden transition-colors duration-200">
 
-    <header class="bg-white dark:bg-gray-800 shadow-sm z-10 px-6 py-4 flex justify-between items-center shrink-0 border-b border-transparent dark:border-gray-700 transition-colors duration-200">
+    <header class="app-header bg-white dark:bg-gray-800 shadow-sm z-10 px-6 py-4 flex justify-between items-center shrink-0 border-b border-transparent dark:border-gray-700 transition-colors duration-200">
         <div>
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-7 h-7 text-blue-600 dark:text-blue-400"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" /></svg>
                 <span data-i18n="title">全尺寸键盘诊断中心</span>
             </h1>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1" data-i18n="subtitle">全局按键拦截已开启。请随意敲击键盘，故障按键将在模型上被标红。</p>
+            <p class="capture-hint">Focus the keyboard to test Tab. Press Escape to leave.</p>
         </div>
-        <div class="flex items-center gap-6">
+        <div class="app-controls flex items-center gap-6">
             <div class="flex items-center gap-3 border-r pr-6 border-gray-200 dark:border-gray-700">
                 <button id="theme-btn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors" title="Toggle Dark Mode">
                     <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 hidden"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" /></svg>
                     <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" /></svg>
                 </button>
-                <div id="lang-toggle" class="flex bg-gray-100 dark:bg-gray-900 rounded-lg p-0.5 cursor-pointer border border-gray-200 dark:border-gray-700 select-none">
+                <button type="button" id="lang-toggle" aria-label="Switch language" class="flex bg-gray-100 dark:bg-gray-900 rounded-lg p-0.5 cursor-pointer border border-gray-200 dark:border-gray-700 select-none">
                     <span id="lang-zh" class="px-3 py-1 rounded-md text-sm font-bold bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm transition-all">中</span>
                     <span id="lang-en" class="px-3 py-1 rounded-md text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all">EN</span>
-                </div>
+                </button>
             </div>
             <div class="flex flex-col items-end">
                 <label for="threshold" class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
@@ -121,11 +145,11 @@
         </div>
     </header>
 
-    <main class="flex-grow flex flex-col p-6 gap-6 overflow-y-auto overflow-x-hidden">
+    <main class="flex-grow flex flex-col p-6 gap-6 min-w-0">
         
         <!-- 虚拟键盘区域 (居中显示，包含主键区、编辑区、小键盘) -->
-        <div class="w-full flex justify-center py-4 bg-gray-200/50 dark:bg-gray-800/50 rounded-2xl border border-gray-300 dark:border-gray-700 shadow-inner overflow-x-auto transition-colors duration-200">
-            <div class="min-w-max flex gap-6 p-4" id="keyboard-container">
+        <div class="keyboard-scroll w-full flex py-4 bg-gray-200/50 dark:bg-gray-800/50 rounded-2xl border border-gray-300 dark:border-gray-700 shadow-inner overflow-x-auto transition-colors duration-200">
+            <div class="min-w-max flex gap-6 p-4" id="keyboard-container" tabindex="0" role="group" aria-label="Keyboard test area">
                 
                 <!-- 1. 主键区 -->
                 <div class="flex flex-col gap-2">
@@ -317,7 +341,7 @@
         </div>
 
         <!-- 数据与日志区域 -->
-        <div class="flex gap-6 h-64 shrink-0">
+        <div class="data-panels flex gap-6 h-64 shrink-0">
             <!-- 数据统计面板 -->
             <div class="w-2/3 flex flex-col bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-colors duration-200">
                 <div class="bg-gray-50 dark:bg-gray-900/50 px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center transition-colors duration-200">
@@ -409,7 +433,6 @@
         const thresholdDisplay = document.getElementById('threshold-display');
         const resetBtn = document.getElementById('reset-btn');
         const statsContainer = document.getElementById('stats-container');
-        const emptyStats = document.getElementById('empty-stats');
         const logContainer = document.getElementById('log-container');
         const errorBadge = document.getElementById('error-badge');
         
@@ -426,6 +449,29 @@
         let hasStarted = false;
         let currentLang = 'zh';
         let isDark = false;
+        let statsFrame = null;
+        const keyboardArea = document.getElementById("keyboard-container");
+
+        function scheduleStatsRender() {
+            if (statsFrame !== null) return;
+            statsFrame = requestAnimationFrame(() => {
+                statsFrame = null;
+                updateStatsUI();
+            });
+        }
+
+        function isControlInteraction(event) {
+            const control = event.target.closest?.("button, input, select, textarea, a, [contenteditable], [role=button]");
+            if (event.code === "Tab") return event.target !== keyboardArea;
+            if (!control) return false;
+            if (control.matches("input[type=range]")) {
+                return ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown"].includes(event.code);
+            }
+            if (control.matches("input, select, textarea, [contenteditable]")) return true;
+            return ["Enter", "NumpadEnter", "Space"].includes(event.code);
+        }
+
+        keyboardArea.addEventListener("click", () => keyboardArea.focus({ preventScroll: true }));
 
         // 国际化文本更新
         function updateLanguage() {
@@ -436,8 +482,9 @@
                 }
             });
             updateBadge();
+            document.documentElement.lang = currentLang === "zh" ? "zh-CN" : "en";
+            updateStatsUI();
             if (!hasStarted) {
-                emptyStats.innerHTML = `<p class="text-sm" data-i18n="emptyStats">${i18nConfig[currentLang].emptyStats}</p>`;
                 if (logContainer.children.length === 1) { // 仅剩占位符时
                     logContainer.innerHTML = `<div class="text-gray-500 dark:text-gray-600 text-xs text-center mt-4" data-i18n="logStart">${i18nConfig[currentLang].logStart}</div>`;
                 }
@@ -469,12 +516,16 @@
         // 更新滑块显示
         thresholdInput.addEventListener('input', (e) => {
             thresholdDisplay.textContent = `${e.target.value}ms`;
+            scheduleStatsRender();
         });
 
         // 重置系统
         resetBtn.addEventListener('click', () => {
             keyStats = {};
             hasStarted = false;
+            cancelAnimationFrame(statsFrame);
+            statsFrame = null;
+            document.body.classList.remove("flash-red-screen");
             
             // 清理视觉反馈
             document.querySelectorAll('.k-key').forEach(el => {
@@ -487,6 +538,7 @@
         });
 
         window.addEventListener('keydown', (e) => {
+            if (isControlInteraction(e)) return;
             // 允许开发者工具和页面刷新，防止用户被完全锁死
             if (e.code === 'F5' || e.code === 'F12' || 
                 (e.ctrlKey && e.code === 'KeyR') || 
@@ -500,8 +552,9 @@
             // 忽略长按产生的连续输入
             if (e.repeat) return;
 
-            const now = performance.now();
+            const now = Number.isFinite(e.timeStamp) ? e.timeStamp : performance.now();
             const code = e.code;
+            if (!code) return;
             
             // 视觉反馈：点亮按键 (处理文本格式避免换行符)
             const keyElement = document.querySelector(`[data-code="${code}"]`);
@@ -512,7 +565,6 @@
             // 初始化数据
             if (!hasStarted) {
                 hasStarted = true;
-                emptyStats.style.display = 'none';
                 logContainer.innerHTML = ''; // 清除提示
             }
 
@@ -532,7 +584,8 @@
                 keyStats[code] = {
                     count: 0,
                     errors: 0,
-                    lastTime: 0,
+                    lastTime: null,
+                    lastUpTime: null,
                     minDiff: Infinity,
                     displayName: displayName,
                     isUnmapped: isUnmapped
@@ -542,9 +595,10 @@
             const stat = keyStats[code];
             const threshold = parseInt(thresholdInput.value, 10);
             
-            // 核心双击检测逻辑
-            if (stat.lastTime !== 0) {
-                const diff = now - stat.lastTime;
+            // Capture both rapid press pairs and release bounce after a held key.
+            if (stat.lastTime !== null) {
+                const reference = stat.lastUpTime ?? stat.lastTime;
+                const diff = Math.max(0, now - reference);
                 
                 if (diff < stat.minDiff) {
                     stat.minDiff = diff;
@@ -560,13 +614,19 @@
             // 更新状态
             stat.count++;
             stat.lastTime = now;
+            stat.lastUpTime = null;
 
             // 优化渲染
-            requestAnimationFrame(updateStatsUI);
+            scheduleStatsRender();
+            if (e.code === "Escape" && e.target === keyboardArea) keyboardArea.blur();
         }, { passive: false }); 
 
         // 按键抬起恢复视觉状态
         window.addEventListener('keyup', (e) => {
+            const stat = keyStats[e.code];
+            if (stat && stat.lastTime !== null && stat.lastUpTime === null) {
+                stat.lastUpTime = Number.isFinite(e.timeStamp) ? e.timeStamp : performance.now();
+            }
             const keyElement = document.querySelector(`[data-code="${e.code}"]`);
             if (keyElement) {
                 keyElement.classList.remove('active');
@@ -575,6 +635,10 @@
 
         // 窗口失去焦点时，清理所有按下状态
         window.addEventListener('blur', () => {
+            Object.values(keyStats).forEach(stat => {
+                stat.lastTime = null;
+                stat.lastUpTime = null;
+            });
             document.querySelectorAll('.k-key.active').forEach(el => {
                 el.classList.remove('active');
             });
@@ -626,7 +690,10 @@
         }
 
         function updateStatsUI() {
-            if (!hasStarted) return;
+            if (!hasStarted) {
+                statsContainer.innerHTML = `<div id="empty-stats" class="h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-500"><p class="text-sm" data-i18n="emptyStats">${i18nConfig[currentLang].emptyStats}</p></div>`;
+                return;
+            }
 
             const sorted = Object.entries(keyStats)
                 .map(([code, data]) => ({ code, ...data }))

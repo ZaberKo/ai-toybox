@@ -1,2 +1,4 @@
 .DS_Store
 dist/
+output/playwright/
+.playwright-cli/

@@ -24,8 +24,8 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Run Edge TTS regression tests
-        run: node --test scripts/tests/edge_tts_web.test.mjs
+      - name: Run regression tests
+        run: node --test scripts/tests/*.test.mjs
 
       - name: Build site from routes.json
         run: python3 scripts/build_site.py
