@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全尺寸键盘双击诊断工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // 开启 Tailwind 的手动 Dark Mode
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <style>
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        
+        /* 隐藏滚动条 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* 按键基础样式 */
+        .k-key {
+            background-color: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            box-shadow: 0 2px 0 #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #374151;
+            user-select: none;
+            transition: all 0.05s ease;
+            position: relative;
+        }
+
+        /* 正在按下状态 */
+        .k-key.active {
+            background-color: #dbeafe;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 #3b82f6;
+            transform: translateY(2px);
+            color: #1d4ed8;
+        }
+
+        /* 发现双击故障时的持久标记状态 */
+        .k-key.error-flagged {
+            background-color: #fee2e2;
+            border-color: #ef4444;
+            color: #b91c1c;
+            box-shadow: 0 2px 0 #fca5a5, 0 0 15px rgba(239, 68, 68, 0.4);
+            animation: pulse-error 2s infinite;
+        }
+        
+        /* 故障键被按下时的状态 */
+        .k-key.error-flagged.active {
+            box-shadow: 0 0 0 #fca5a5, 0 0 20px rgba(239, 68, 68, 0.6);
+            transform: translateY(2px);
+        }
+
+        @keyframes pulse-error {
+            0%, 100% { box-shadow: 0 2px 0 #fca5a5, 0 0 5px rgba(239, 68, 68, 0.2); }
+            50% { box-shadow: 0 2px 0 #fca5a5, 0 0 15px rgba(239, 68, 68, 0.6); }
+        }
+
+        /* 错误发生时的全屏警示 */
+        @keyframes flash-screen {
+            0% { box-shadow: inset 0 0 0 0 rgba(239, 68, 68, 0); }
+            10% { box-shadow: inset 0 0 30px 10px rgba(239, 68, 68, 0.3); }
+            100% { box-shadow: inset 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .flash-red-screen { animation: flash-screen 0.5s ease-out; }
+
+        /* Dark Mode 专属覆盖样式 */
+        .dark body { background-color: #111827; color: #f3f4f6; }
+        .dark .k-key { background-color: #374151; border-color: #4b5563; color: #d1d5db; box-shadow: 0 2px 0 #1f2937; }
+        .dark .k-key.active { background-color: #1e3a8a; border-color: #3b82f6; color: #bfdbfe; box-shadow: 0 0 0 #3b82f6; }
+        .dark .k-key.error-flagged { background-color: #7f1d1d; border-color: #ef4444; color: #fca5a5; box-shadow: 0 2px 0 #450a0a, 0 0 15px rgba(239, 68, 68, 0.4); }
+        .dark .k-key.error-flagged.active { box-shadow: 0 0 0 #450a0a, 0 0 20px rgba(239, 68, 68, 0.6); }
+
+        /* 特殊按键尺寸微调 (基础单位 w-11 h-11) */
+        .w-base { width: 3.2rem; }
+        .h-base { height: 3.2rem; }
+        .h-double { height: calc(6.4rem + 0.5rem); } /* 两个按键高度 + 间距 */
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 h-screen flex flex-col overflow-hidden transition-colors duration-200">
+
+    <header class="bg-white dark:bg-gray-800 shadow-sm z-10 px-6 py-4 flex justify-between items-center shrink-0 border-b border-transparent dark:border-gray-700 transition-colors duration-200">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-7 h-7 text-blue-600 dark:text-blue-400"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" /></svg>
+                <span data-i18n="title">全尺寸键盘诊断中心</span>
+            </h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1" data-i18n="subtitle">全局按键拦截已开启。请随意敲击键盘，故障按键将在模型上被标红。</p>
+        </div>
+        <div class="flex items-center gap-6">
+            <div class="flex items-center gap-3 border-r pr-6 border-gray-200 dark:border-gray-700">
+                <button id="theme-btn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors" title="Toggle Dark Mode">
+                    <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 hidden"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" /></svg>
+                    <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" /></svg>
+                </button>
+                <div id="lang-toggle" class="flex bg-gray-100 dark:bg-gray-900 rounded-lg p-0.5 cursor-pointer border border-gray-200 dark:border-gray-700 select-none">
+                    <span id="lang-zh" class="px-3 py-1 rounded-md text-sm font-bold bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm transition-all">中</span>
+                    <span id="lang-en" class="px-3 py-1 rounded-md text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all">EN</span>
+                </div>
+            </div>
+            <div class="flex flex-col items-end">
+                <label for="threshold" class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
+                    <span data-i18n="threshold">双击判定阈值:</span> <span id="threshold-display" class="font-mono text-blue-600 dark:text-blue-400 font-bold">40ms</span>
+                </label>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-400 dark:text-gray-500">20ms</span>
+                    <input type="range" id="threshold" min="20" max="100" value="40" step="5" class="w-32 cursor-pointer accent-blue-600 dark:accent-blue-400">
+                    <span class="text-xs text-gray-400 dark:text-gray-500">100ms</span>
+                </div>
+            </div>
+            <button id="reset-btn" class="bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 text-red-600 dark:text-red-400 px-4 py-2 rounded-lg font-medium transition-colors text-sm border border-red-200 dark:border-red-900/50 shadow-sm flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+                <span data-i18n="reset">重置测试</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col p-6 gap-6 overflow-y-auto overflow-x-hidden">
+        
+        <!-- 虚拟键盘区域 (居中显示，包含主键区、编辑区、小键盘) -->
+        <div class="w-full flex justify-center py-4 bg-gray-200/50 dark:bg-gray-800/50 rounded-2xl border border-gray-300 dark:border-gray-700 shadow-inner overflow-x-auto transition-colors duration-200">
+            <div class="min-w-max flex gap-6 p-4" id="keyboard-container">
+                
+                <!-- 1. 主键区 -->
+                <div class="flex flex-col gap-2">
+                    <!-- F区 -->
+                    <div class="flex gap-2 mb-2">
+                        <div class="k-key w-base h-base text-xs" data-code="Escape">Esc</div>
+                        <div class="w-base"></div> <!-- 空白 -->
+                        <div class="k-key w-base h-base text-xs" data-code="F1">F1</div>
+                        <div class="k-key w-base h-base text-xs" data-code="F2">F2</div>
+                        <div class="k-key w-base h-base text-xs" data-code="F3">F3</div>
+                        <div class="k-key w-base h-base text-xs" data-code="F4">F4</div>
+                        <div class="w-4"></div> <!-- 空白 -->
+                        <div class="k-key w-base h-base text-xs" data-code="F5">F5</div>
+                        <div class="k-key w-base h-base text-xs" data-code="F6">F6</div>
+                        <div class="k-key w-base h-base text-xs" data-code="F7">F7</div>
+                        <div class="k-key w-base h-base text-xs" data-code="F8">F8</div>
+                        <div class="w-4"></div> <!-- 空白 -->
+                        <div class="k-key w-base h-base text-xs" data-code="F9">F9</div>
+                        <div class="k-key w-base h-base text-xs" data-code="F10">F10</div>
+                        <div class="k-key w-base h-base text-xs" data-code="F11">F11</div>
+                        <div class="k-key w-base h-base text-xs" data-code="F12">F12</div>
+                    </div>
+                    <!-- 数字行 -->
+                    <div class="flex gap-2">
+                        <div class="k-key w-base h-base text-xs" data-code="Backquote">~ `</div>
+                        <div class="k-key w-base h-base" data-code="Digit1">1</div>
+                        <div class="k-key w-base h-base" data-code="Digit2">2</div>
+                        <div class="k-key w-base h-base" data-code="Digit3">3</div>
+                        <div class="k-key w-base h-base" data-code="Digit4">4</div>
+                        <div class="k-key w-base h-base" data-code="Digit5">5</div>
+                        <div class="k-key w-base h-base" data-code="Digit6">6</div>
+                        <div class="k-key w-base h-base" data-code="Digit7">7</div>
+                        <div class="k-key w-base h-base" data-code="Digit8">8</div>
+                        <div class="k-key w-base h-base" data-code="Digit9">9</div>
+                        <div class="k-key w-base h-base" data-code="Digit0">0</div>
+                        <div class="k-key w-base h-base" data-code="Minus">- _</div>
+                        <div class="k-key w-base h-base" data-code="Equal">= +</div>
+                        <div class="k-key h-base text-xs" style="width: 6.4rem;" data-code="Backspace">Backspace</div>
+                    </div>
+                    <!-- QWERTY行 -->
+                    <div class="flex gap-2">
+                        <div class="k-key h-base text-xs" style="width: 4.8rem;" data-code="Tab">Tab</div>
+                        <div class="k-key w-base h-base" data-code="KeyQ">Q</div>
+                        <div class="k-key w-base h-base" data-code="KeyW">W</div>
+                        <div class="k-key w-base h-base" data-code="KeyE">E</div>
+                        <div class="k-key w-base h-base" data-code="KeyR">R</div>
+                        <div class="k-key w-base h-base" data-code="KeyT">T</div>
+                        <div class="k-key w-base h-base" data-code="KeyY">Y</div>
+                        <div class="k-key w-base h-base" data-code="KeyU">U</div>
+                        <div class="k-key w-base h-base" data-code="KeyI">I</div>
+                        <div class="k-key w-base h-base" data-code="KeyO">O</div>
+                        <div class="k-key w-base h-base" data-code="KeyP">P</div>
+                        <div class="k-key w-base h-base" data-code="BracketLeft">[ {</div>
+                        <div class="k-key w-base h-base" data-code="BracketRight">] }</div>
+                        <div class="k-key h-base flex-grow text-xs" data-code="Backslash">\ |</div>
+                    </div>
+                    <!-- ASDF行 -->
+                    <div class="flex gap-2">
+                        <div class="k-key h-base text-xs" style="width: 5.8rem;" data-code="CapsLock">Caps Lock</div>
+                        <div class="k-key w-base h-base" data-code="KeyA">A</div>
+                        <div class="k-key w-base h-base" data-code="KeyS">S</div>
+                        <div class="k-key w-base h-base" data-code="KeyD">D</div>
+                        <div class="k-key w-base h-base" data-code="KeyF">F</div>
+                        <div class="k-key w-base h-base" data-code="KeyG">G</div>
+                        <div class="k-key w-base h-base" data-code="KeyH">H</div>
+                        <div class="k-key w-base h-base" data-code="KeyJ">J</div>
+                        <div class="k-key w-base h-base" data-code="KeyK">K</div>
+                        <div class="k-key w-base h-base" data-code="KeyL">L</div>
+                        <div class="k-key w-base h-base" data-code="Semicolon">; :</div>
+                        <div class="k-key w-base h-base" data-code="Quote">' "</div>
+                        <div class="k-key h-base flex-grow text-xs" data-code="Enter">Enter</div>
+                    </div>
+                    <!-- ZXCV行 -->
+                    <div class="flex gap-2">
+                        <div class="k-key h-base text-xs" style="width: 7.8rem;" data-code="ShiftLeft">Shift</div>
+                        <div class="k-key w-base h-base" data-code="KeyZ">Z</div>
+                        <div class="k-key w-base h-base" data-code="KeyX">X</div>
+                        <div class="k-key w-base h-base" data-code="KeyC">C</div>
+                        <div class="k-key w-base h-base" data-code="KeyV">V</div>
+                        <div class="k-key w-base h-base" data-code="KeyB">B</div>
+                        <div class="k-key w-base h-base" data-code="KeyN">N</div>
+                        <div class="k-key w-base h-base" data-code="KeyM">M</div>
+                        <div class="k-key w-base h-base" data-code="Comma">, <</div>
+                        <div class="k-key w-base h-base" data-code="Period">. ></div>
+                        <div class="k-key w-base h-base" data-code="Slash">/ ?</div>
+                        <div class="k-key h-base flex-grow text-xs" data-code="ShiftRight">Shift</div>
+                    </div>
+                    <!-- 控制行 -->
+                    <div class="flex gap-2">
+                        <div class="k-key h-base text-xs" style="width: 4.8rem;" data-code="ControlLeft">Ctrl</div>
+                        <div class="k-key h-base text-xs" style="width: 4rem;" data-code="MetaLeft">Win</div>
+                        <div class="k-key h-base text-xs" style="width: 4.8rem;" data-code="AltLeft">Alt</div>
+                        <div class="k-key h-base flex-grow text-xs" data-code="Space">Space</div>
+                        <div class="k-key h-base text-xs" style="width: 4.8rem;" data-code="AltRight">Alt</div>
+                        <!-- 增加 Fn 键作为提示 -->
+                        <div class="k-key h-base text-xs relative group cursor-help" style="width: 4rem;" data-code="Fn">Fn
+                            <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-800 dark:bg-gray-600 text-white text-[11px] px-2 py-1 rounded hidden group-hover:block whitespace-nowrap z-10 shadow-lg" data-i18n="fnTooltip">Fn属于硬件按键，浏览器无法检测</div>
+                        </div>
+                        <div class="k-key h-base text-xs" style="width: 4.8rem;" data-code="ContextMenu">Menu</div>
+                        <div class="k-key h-base text-xs" style="width: 4.8rem;" data-code="ControlRight">Ctrl</div>
+                    </div>
+                </div>
+
+                <!-- 2. 编辑/方向键区 -->
+                <div class="flex flex-col gap-2">
+                    <!-- 第一行功能键 -->
+                    <div class="flex gap-2 mb-2">
+                        <div class="k-key w-base h-base text-xs flex-col leading-none" data-code="PrintScreen"><span>Prt</span><span>Scn</span></div>
+                        <div class="k-key w-base h-base text-xs flex-col leading-none" data-code="ScrollLock"><span>Scr</span><span>Lk</span></div>
+                        <div class="k-key w-base h-base text-xs flex-col leading-none" data-code="Pause"><span>Pause</span></div>
+                    </div>
+                    <!-- Insert / Home / PageUp -->
+                    <div class="flex gap-2">
+                        <div class="k-key w-base h-base text-xs" data-code="Insert">Ins</div>
+                        <div class="k-key w-base h-base text-xs" data-code="Home">Home</div>
+                        <div class="k-key w-base h-base text-xs flex-col leading-none" data-code="PageUp"><span>Pg</span><span>Up</span></div>
+                    </div>
+                    <!-- Delete / End / PageDown -->
+                    <div class="flex gap-2">
+                        <div class="k-key w-base h-base text-xs" data-code="Delete">Del</div>
+                        <div class="k-key w-base h-base text-xs" data-code="End">End</div>
+                        <div class="k-key w-base h-base text-xs flex-col leading-none" data-code="PageDown"><span>Pg</span><span>Dn</span></div>
+                    </div>
+                    <!-- 占位区 -->
+                    <div class="flex gap-2 mt-4">
+                        <div class="w-base h-base"></div>
+                        <div class="k-key w-base h-base text-lg" data-code="ArrowUp">↑</div>
+                        <div class="w-base h-base"></div>
+                    </div>
+                    <!-- 方向键下排 -->
+                    <div class="flex gap-2">
+                        <div class="k-key w-base h-base text-lg" data-code="ArrowLeft">←</div>
+                        <div class="k-key w-base h-base text-lg" data-code="ArrowDown">↓</div>
+                        <div class="k-key w-base h-base text-lg" data-code="ArrowRight">→</div>
+                    </div>
+                </div>
+
+                <!-- 3. 小键盘区 -->
+                <div class="flex flex-col gap-2">
+                    <!-- 占位对齐 -->
+                    <div class="flex gap-2 mb-2 h-base">
+                        <div class="flex items-end w-full text-xs text-gray-400 justify-end pb-2 pr-2">Numpad</div>
+                    </div>
+                    <!-- 第一排 -->
+                    <div class="flex gap-2">
+                        <div class="k-key w-base h-base text-xs flex-col leading-none" data-code="NumLock"><span>Num</span><span>Lk</span></div>
+                        <div class="k-key w-base h-base text-sm" data-code="NumpadDivide">/</div>
+                        <div class="k-key w-base h-base text-sm" data-code="NumpadMultiply">*</div>
+                        <div class="k-key w-base h-base text-sm" data-code="NumpadSubtract">-</div>
+                    </div>
+                    
+                    <div class="flex gap-2 h-double">
+                        <!-- 左侧 3列数字 -->
+                        <div class="flex flex-col gap-2">
+                            <div class="flex gap-2">
+                                <div class="k-key w-base h-base text-sm" data-code="Numpad7">7</div>
+                                <div class="k-key w-base h-base text-sm" data-code="Numpad8">8</div>
+                                <div class="k-key w-base h-base text-sm" data-code="Numpad9">9</div>
+                            </div>
+                            <div class="flex gap-2">
+                                <div class="k-key w-base h-base text-sm" data-code="Numpad4">4</div>
+                                <div class="k-key w-base h-base text-sm" data-code="Numpad5">5</div>
+                                <div class="k-key w-base h-base text-sm" data-code="Numpad6">6</div>
+                            </div>
+                        </div>
+                        <!-- 右侧高按钮 + -->
+                        <div class="k-key w-base h-double text-sm" data-code="NumpadAdd">+</div>
+                    </div>
+
+                    <div class="flex gap-2 h-double">
+                        <!-- 左侧 -->
+                        <div class="flex flex-col gap-2">
+                            <div class="flex gap-2">
+                                <div class="k-key w-base h-base text-sm" data-code="Numpad1">1</div>
+                                <div class="k-key w-base h-base text-sm" data-code="Numpad2">2</div>
+                                <div class="k-key w-base h-base text-sm" data-code="Numpad3">3</div>
+                            </div>
+                            <div class="flex gap-2">
+                                <div class="k-key h-base text-sm" style="width: calc(6.4rem + 0.5rem);" data-code="Numpad0">0</div>
+                                <div class="k-key w-base h-base text-sm" data-code="NumpadDecimal">.</div>
+                            </div>
+                        </div>
+                        <!-- 右侧高按钮 Enter -->
+                        <div class="k-key w-base h-double text-xs" data-code="NumpadEnter">Enter</div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- 数据与日志区域 -->
+        <div class="flex gap-6 h-64 shrink-0">
+            <!-- 数据统计面板 -->
+            <div class="w-2/3 flex flex-col bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-colors duration-200">
+                <div class="bg-gray-50 dark:bg-gray-900/50 px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center transition-colors duration-200">
+                    <h2 class="font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>
+                        <span data-i18n="health">按键健康数据</span>
+                    </h2>
+                    <span class="text-xs text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-3 py-1 rounded-full font-bold transition-colors" id="error-badge" data-i18n="noError">无异常</span>
+                </div>
+                
+                <div class="grid grid-cols-4 px-4 py-2 bg-gray-50 dark:bg-gray-800/80 border-b border-gray-100 dark:border-gray-700 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider transition-colors duration-200">
+                    <div data-i18n="phyKey">物理按键 (Code)</div>
+                    <div class="text-center" data-i18n="totalHits">敲击总数</div>
+                    <div class="text-center" data-i18n="minDiff">极限连击间隔</div>
+                    <div class="text-right" data-i18n="suspects">疑似故障次数</div>
+                </div>
+
+                <div id="stats-container" class="flex-grow overflow-y-auto no-scrollbar p-2">
+                    <div id="empty-stats" class="h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
+                        <p class="text-sm" data-i18n="emptyStats">直接在键盘上敲击，数据将在此实时刷新</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 实时日志面板 -->
+            <div class="w-1/3 flex flex-col bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-colors duration-200">
+                <div class="bg-gray-900 dark:bg-gray-950 px-4 py-3 border-b border-gray-800 dark:border-gray-900">
+                    <h2 class="font-semibold text-gray-100 text-sm flex items-center gap-2">
+                        <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                        <span data-i18n="logTitle">实时拦截日志</span>
+                    </h2>
+                </div>
+                <div id="log-container" class="flex-grow overflow-y-auto no-scrollbar p-3 space-y-2 bg-gray-900 dark:bg-gray-950 transition-colors duration-200">
+                    <div class="text-gray-500 dark:text-gray-600 text-xs text-center mt-4" data-i18n="logStart">监听已启动，等待按键...</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // 国际化字典
+        const i18nConfig = {
+            zh: {
+                title: "全尺寸键盘诊断中心",
+                subtitle: "全局按键拦截已开启。请随意敲击键盘，故障按键将在模型上被标红。",
+                threshold: "双击判定阈值:",
+                reset: "重置测试",
+                health: "按键健康数据",
+                noError: "无异常",
+                phyKey: "物理按键 (Code)",
+                totalHits: "敲击总数",
+                minDiff: "极限连击间隔",
+                suspects: "疑似故障次数",
+                emptyStats: "直接在键盘上敲击，数据将在此实时刷新",
+                logTitle: "实时拦截日志",
+                logStart: "监听已启动，等待按键...",
+                logReset: "系统已重置，重新等待按键...",
+                healthStatus: "状态健康",
+                errorBadge: (n) => `发现 ${n} 个按键故障`,
+                fastCombo: "极速连击!",
+                fnTooltip: "Fn属于硬件按键，浏览器无法检测",
+                unmappedKey: "未在模型中"
+            },
+            en: {
+                title: "Keyboard Diagnostics",
+                subtitle: "Global interception active. Type freely, faulty keys will be flagged.",
+                threshold: "Threshold:",
+                reset: "Reset Test",
+                health: "Key Health Data",
+                noError: "Healthy",
+                phyKey: "Physical Key (Code)",
+                totalHits: "Total Hits",
+                minDiff: "Min Interval",
+                suspects: "Suspects",
+                emptyStats: "Type anywhere, data will refresh here in real-time",
+                logTitle: "Real-time Interception Log",
+                logStart: "Listener started, waiting for input...",
+                logReset: "System reset, waiting for input...",
+                healthStatus: "Healthy",
+                errorBadge: (n) => `Found ${n} faulty keys`,
+                fastCombo: "Fast Click!",
+                fnTooltip: "Fn is a hardware key, undetectable by browsers",
+                unmappedKey: "Unmapped Key"
+            }
+        };
+
+        // DOM 元素引用
+        const thresholdInput = document.getElementById('threshold');
+        const thresholdDisplay = document.getElementById('threshold-display');
+        const resetBtn = document.getElementById('reset-btn');
+        const statsContainer = document.getElementById('stats-container');
+        const emptyStats = document.getElementById('empty-stats');
+        const logContainer = document.getElementById('log-container');
+        const errorBadge = document.getElementById('error-badge');
+        
+        // 主题与语言按钮
+        const langToggle = document.getElementById('lang-toggle');
+        const langZh = document.getElementById('lang-zh');
+        const langEn = document.getElementById('lang-en');
+        const themeBtn = document.getElementById('theme-btn');
+        const iconSun = document.getElementById('icon-sun');
+        const iconMoon = document.getElementById('icon-moon');
+
+        // 核心数据状态
+        let keyStats = {};
+        let hasStarted = false;
+        let currentLang = 'zh';
+        let isDark = false;
+
+        // 国际化文本更新
+        function updateLanguage() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18nConfig[currentLang][key]) {
+                    el.innerText = i18nConfig[currentLang][key];
+                }
+            });
+            updateBadge();
+            if (!hasStarted) {
+                emptyStats.innerHTML = `<p class="text-sm" data-i18n="emptyStats">${i18nConfig[currentLang].emptyStats}</p>`;
+                if (logContainer.children.length === 1) { // 仅剩占位符时
+                    logContainer.innerHTML = `<div class="text-gray-500 dark:text-gray-600 text-xs text-center mt-4" data-i18n="logStart">${i18nConfig[currentLang].logStart}</div>`;
+                }
+            }
+        }
+
+        // 切换语言
+        langToggle.addEventListener('click', () => {
+            currentLang = currentLang === 'zh' ? 'en' : 'zh';
+            
+            if (currentLang === 'zh') {
+                langZh.className = "px-3 py-1 rounded-md text-sm font-bold bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm transition-all";
+                langEn.className = "px-3 py-1 rounded-md text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all";
+            } else {
+                langEn.className = "px-3 py-1 rounded-md text-sm font-bold bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm transition-all";
+                langZh.className = "px-3 py-1 rounded-md text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all";
+            }
+            updateLanguage();
+        });
+
+        // 切换夜间模式
+        themeBtn.addEventListener('click', () => {
+            isDark = !isDark;
+            document.documentElement.classList.toggle('dark', isDark);
+            iconSun.classList.toggle('hidden', !isDark);
+            iconMoon.classList.toggle('hidden', isDark);
+        });
+
+        // 更新滑块显示
+        thresholdInput.addEventListener('input', (e) => {
+            thresholdDisplay.textContent = `${e.target.value}ms`;
+        });
+
+        // 重置系统
+        resetBtn.addEventListener('click', () => {
+            keyStats = {};
+            hasStarted = false;
+            
+            // 清理视觉反馈
+            document.querySelectorAll('.k-key').forEach(el => {
+                el.classList.remove('active', 'error-flagged');
+            });
+            
+            updateStatsUI();
+            logContainer.innerHTML = `<div class="text-gray-500 dark:text-gray-600 text-xs text-center mt-4" data-i18n="logReset">${i18nConfig[currentLang].logReset}</div>`;
+            updateBadge();
+        });
+
+        window.addEventListener('keydown', (e) => {
+            // 允许开发者工具和页面刷新，防止用户被完全锁死
+            if (e.code === 'F5' || e.code === 'F12' || 
+                (e.ctrlKey && e.code === 'KeyR') || 
+                (e.ctrlKey && e.shiftKey && e.code === 'KeyI')) {
+                return; 
+            }
+            
+            // 拦截其他所有默认行为 (页面滚动、快捷键等)
+            e.preventDefault();
+
+            // 忽略长按产生的连续输入
+            if (e.repeat) return;
+
+            const now = performance.now();
+            const code = e.code;
+            
+            // 视觉反馈：点亮按键 (处理文本格式避免换行符)
+            const keyElement = document.querySelector(`[data-code="${code}"]`);
+            if (keyElement) {
+                keyElement.classList.add('active');
+            }
+
+            // 初始化数据
+            if (!hasStarted) {
+                hasStarted = true;
+                emptyStats.style.display = 'none';
+                logContainer.innerHTML = ''; // 清除提示
+            }
+
+            if (!keyStats[code]) {
+                // 提取单纯的按键名称用于展示，去除 tooltip 文本
+                let displayName = code;
+                let isUnmapped = true;
+                if (keyElement) {
+                    // 复制一个节点以去掉 tooltip (因为 tooltip 在子节点内)
+                    const clone = keyElement.cloneNode(true);
+                    const tooltips = clone.querySelectorAll('[data-i18n]');
+                    tooltips.forEach(t => t.remove());
+                    displayName = clone.innerText.replace(/\n/g, ' ').trim();
+                    isUnmapped = false;
+                }
+
+                keyStats[code] = {
+                    count: 0,
+                    errors: 0,
+                    lastTime: 0,
+                    minDiff: Infinity,
+                    displayName: displayName,
+                    isUnmapped: isUnmapped
+                };
+            }
+
+            const stat = keyStats[code];
+            const threshold = parseInt(thresholdInput.value, 10);
+            
+            // 核心双击检测逻辑
+            if (stat.lastTime !== 0) {
+                const diff = now - stat.lastTime;
+                
+                if (diff < stat.minDiff) {
+                    stat.minDiff = diff;
+                }
+
+                // 判断为异常连击
+                if (diff <= threshold) {
+                    stat.errors++;
+                    handleError(code, stat.displayName, diff, keyElement);
+                }
+            }
+
+            // 更新状态
+            stat.count++;
+            stat.lastTime = now;
+
+            // 优化渲染
+            requestAnimationFrame(updateStatsUI);
+        }, { passive: false }); 
+
+        // 按键抬起恢复视觉状态
+        window.addEventListener('keyup', (e) => {
+            const keyElement = document.querySelector(`[data-code="${e.code}"]`);
+            if (keyElement) {
+                keyElement.classList.remove('active');
+            }
+        });
+
+        // 窗口失去焦点时，清理所有按下状态
+        window.addEventListener('blur', () => {
+            document.querySelectorAll('.k-key.active').forEach(el => {
+                el.classList.remove('active');
+            });
+        });
+
+        function handleError(code, name, diff, keyElement) {
+            // 1. 触发屏幕闪烁
+            document.body.classList.remove('flash-red-screen');
+            void document.body.offsetWidth; 
+            document.body.classList.add('flash-red-screen');
+
+            // 2. 标记虚拟键盘按键
+            if (keyElement) {
+                keyElement.classList.add('error-flagged');
+            }
+
+            // 3. 更新日志
+            const timeStr = new Date().toLocaleTimeString(currentLang === 'zh' ? 'zh-CN' : 'en-US', { hour12: false, fractionalSecondDigits: 3 });
+            const logHTML = `
+                <div class="text-sm font-mono flex items-center gap-2 text-gray-300 border-l-2 border-red-500 pl-2 bg-gray-800/50 p-1.5 rounded animate-bounce">
+                    <span class="text-gray-500">[${timeStr}]</span>
+                    <span class="text-white font-bold px-1.5 bg-red-900/50 text-red-100 rounded border border-red-800">${name}</span>
+                    <span class="text-red-400">${i18nConfig[currentLang].fastCombo}</span>
+                    <span class="text-red-300 font-bold ml-auto">${Math.round(diff)}ms</span>
+                </div>
+            `;
+            logContainer.insertAdjacentHTML('afterbegin', logHTML);
+            
+            // 限制日志条数防卡顿
+            if (logContainer.children.length > 50) {
+                logContainer.lastElementChild.remove();
+            }
+            updateBadge();
+        }
+
+        function getFaultyKeysCount() {
+            return Object.values(keyStats).filter(stat => stat.errors > 0).length;
+        }
+
+        function updateBadge() {
+            const faultyCount = getFaultyKeysCount();
+            if (faultyCount > 0) {
+                errorBadge.textContent = i18nConfig[currentLang].errorBadge(faultyCount);
+                errorBadge.className = 'text-xs text-white bg-red-600 px-3 py-1 rounded-full font-bold shadow-sm animate-pulse';
+            } else {
+                errorBadge.textContent = i18nConfig[currentLang].healthStatus;
+                errorBadge.className = 'text-xs text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-3 py-1 rounded-full font-bold transition-colors';
+            }
+        }
+
+        function updateStatsUI() {
+            if (!hasStarted) return;
+
+            const sorted = Object.entries(keyStats)
+                .map(([code, data]) => ({ code, ...data }))
+                .sort((a, b) => {
+                    if (a.errors !== b.errors) return b.errors - a.errors;
+                    if (a.minDiff !== b.minDiff && a.minDiff !== Infinity) return a.minDiff - b.minDiff;
+                    return b.count - a.count;
+                });
+
+            let html = '';
+            const threshold = parseInt(thresholdInput.value, 10);
+
+            sorted.forEach(stat => {
+                const isError = stat.errors > 0;
+                const isWarn = !isError && stat.minDiff < threshold + 25; 
+                
+                let rowBg = 'hover:bg-gray-100 dark:hover:bg-gray-700 border-transparent border-b-gray-100 dark:border-b-gray-800';
+                if (isError) rowBg = 'bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 border-red-200 dark:border-red-800/50 text-red-900 dark:text-red-200';
+                else if (isWarn) rowBg = 'bg-yellow-50 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:hover:bg-yellow-900/40 border-yellow-200 dark:border-yellow-800/50';
+
+                let diffColor = 'text-gray-500 dark:text-gray-400';
+                if (isError) diffColor = 'text-red-600 dark:text-red-400 font-bold';
+                else if (isWarn) diffColor = 'text-yellow-600 dark:text-yellow-400 font-bold';
+
+                html += `
+                    <div class="grid grid-cols-4 items-center px-4 py-2.5 rounded-lg mb-1 border transition-colors ${rowBg}">
+                        <div class="font-bold font-mono text-sm flex items-center gap-2">
+                            <span class="bg-white dark:bg-gray-700 px-2 py-0.5 rounded shadow-sm border border-gray-200 dark:border-gray-600 inline-block min-w-[2rem] text-center">${stat.displayName}</span>
+                            ${stat.isUnmapped ? `<span class="text-[10px] bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded whitespace-nowrap border border-gray-300 dark:border-gray-600">${i18nConfig[currentLang].unmappedKey}</span>` : ''}
+                        </div>
+                        <div class="text-center font-mono text-gray-600 dark:text-gray-300">${stat.count}</div>
+                        <div class="text-center font-mono ${diffColor}">
+                            ${stat.minDiff === Infinity ? '-' : Math.round(stat.minDiff) + ' ms'}
+                        </div>
+                        <div class="text-right font-mono flex justify-end">
+                            ${isError 
+                                ? `<span class="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs font-bold min-w-[1.5rem] text-center">${stat.errors}</span>` 
+                                : `<span class="text-gray-400 dark:text-gray-500">0</span>`}
+                        </div>
+                    </div>
+                `;
+            });
+
+            statsContainer.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

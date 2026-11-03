@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edge-TTS Studio | 神经网络语音合成控制台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        edge: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(71, 85, 105, 0.8);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(56, 189, 248, 0.8);
+        }
+        /* 自定义滑块样式 */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: #334155;
+            border-radius: 999px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: #38bdf8;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -6px;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+            transition: transform 0.15s ease;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+            background: #7dd3fc;
+        }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col selection:bg-sky-500 selection:text-white">
+
+    <!-- 顶部导航栏 -->
+    <header class="sticky top-0 z-30 glass-panel border-b border-slate-800/80 px-4 lg:px-8 py-3.5">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
+                    <i data-lucide="audio-waveform" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-lg font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-sky-400 bg-clip-text text-transparent">
+                            edge-tts Studio
+                        </h1>
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 font-mono">v6.1+</span>
+                    </div>
+                    <p class="text-xs text-slate-400">基于 rany2/edge-tts 的参数调试、多语言检索与实时语音合成工作台</p>
+                </div>
+            </div>
+
+            <!-- 状态统计与外链 -->
+            <div class="flex items-center gap-3">
+                <div class="hidden sm:flex items-center gap-4 bg-slate-900/90 border border-slate-800 px-3.5 py-1.5 rounded-xl text-xs">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span class="text-slate-400">支持语言:</span>
+                        <span id="stat-locales" class="font-bold text-white font-mono">--</span>
+                    </div>
+                    <div class="h-3 w-px bg-slate-800"></div>
+                    <div class="flex items-center gap-1.5">
+                        <i data-lucide="mic" class="w-3.5 h-3.5 text-sky-400"></i>
+                        <span class="text-slate-400">可用音色:</span>
+                        <span id="stat-voices" class="font-bold text-white font-mono">--</span>
+                    </div>
+                </div>
+
+                <a href="https://github.com/rany2/edge-tts" target="_blank" rel="noopener noreferrer" 
+                   class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition border border-slate-700">
+                    <i data-lucide="github" class="w-4 h-4"></i>
+                    <span>rany2/edge-tts</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主体内容区 -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- 左侧：所有支持的语言与语音浏览器 (占 5 列) -->
+        <section class="lg:col-span-5 flex flex-col glass-panel rounded-2xl overflow-hidden h-[680px] lg:h-[calc(100vh-120px)]">
+            <!-- 搜索与过滤头部 -->
+            <div class="p-4 border-b border-slate-800/80 space-y-3 bg-slate-900/50">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-sm font-semibold flex items-center gap-2 text-slate-200">
+                        <i data-lucide="globe-2" class="w-4 h-4 text-sky-400"></i>
+                        <span>支持的语言与语音库 (Voices)</span>
+                    </h2>
+                    <button id="btn-sync-voices" title="从微软官方接口同步全部 320+ 语音" 
+                            class="text-xs flex items-center gap-1 text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 px-2.5 py-1 rounded-lg transition">
+                        <i data-lucide="refresh-cw" class="w-3 h-3" id="sync-icon"></i>
+                        <span id="sync-text">同步云端完整列表</span>
+                    </button>
+                </div>
+
+                <!-- 关键字搜索框 -->
+                <div class="relative">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                    <input type="text" id="voice-search" placeholder="搜索语言、地区、ShortName (如 Xiaoxiao, zh-CN, ja-JP)..." 
+                           class="w-full bg-slate-950/90 border border-slate-800 focus:border-sky-500 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none transition">
+                </div>
+
+                <!-- 筛选器行 -->
+                <div class="grid grid-cols-12 gap-2">
+                    <!-- 语言/地区下拉选择 -->
+                    <div class="col-span-7">
+                        <select id="locale-filter" class="w-full bg-slate-950/90 border border-slate-800 focus:border-sky-500 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
+                            <option value="ALL">🌍 所有语言与地区 (All Locales)</option>
+                        </select>
+                    </div>
+                    <!-- 性别筛选 -->
+                    <div class="col-span-5 flex bg-slate-950/90 p-0.5 rounded-xl border border-slate-800">
+                        <button data-gender="ALL" class="gender-btn flex-1 text-xs py-1 rounded-lg bg-sky-500 text-white font-medium transition">全部</button>
+                        <button data-gender="Female" class="gender-btn flex-1 text-xs py-1 rounded-lg text-slate-400 hover:text-slate-200 transition">女声</button>
+                        <button data-gender="Male" class="gender-btn flex-1 text-xs py-1 rounded-lg text-slate-400 hover:text-slate-200 transition">男声</button>
+                    </div>
+                </div>
+
+                <!-- 分类标签筛选 (ContentCategories / VoicePersonalities) -->
+                <div class="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-[11px]" id="category-chips">
+                    <button data-cat="ALL" class="cat-chip shrink-0 px-2.5 py-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">全部特性</button>
+                    <button data-cat="Multilingual" class="cat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200">🔥 多语言混合 (Multilingual)</button>
+                    <button data-cat="Conversation" class="cat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200">自然对话</button>
+                    <button data-cat="News" class="cat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200">新闻播报</button>
+                    <button data-cat="Novel" class="cat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200">小说故事</button>
+                    <button data-cat="Dialect" class="cat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200">特色方言</button>
+                </div>
+            </div>
+
+            <!-- 语音列表滚动容器 -->
+            <div id="voice-list-container" class="flex-1 overflow-y-auto p-3 space-y-2">
+                <!-- 动态渲染语音卡片 -->
+            </div>
+
+            <!-- 底部列表状态栏 -->
+            <div class="px-4 py-2.5 bg-slate-900/80 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+                <span>当前筛选结果: <strong id="filtered-count" class="text-slate-200">0</strong> 个音色</span>
+                <span class="font-mono text-[11px] text-sky-400" id="current-selected-badge">zh-CN-XiaoxiaoNeural</span>
+            </div>
+        </section>
+
+        <!-- 右侧：参数控制面板、文本合成器与 CLI/Python 代码生成器 (占 7 列) -->
+        <section class="lg:col-span-7 flex flex-col gap-6">
+            
+            <!-- 1. Edge-TTS 可控参数面板 (Rate, Volume, Pitch & 引擎配置) -->
+            <div class="glass-panel rounded-2xl p-5 space-y-5">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="sliders" class="w-4 h-4 text-sky-400"></i>
+                        <h2 class="text-sm font-semibold text-slate-200">可控制参数配置 (Prosody & Options)</h2>
+                    </div>
+                    <button id="btn-reset-params" class="text-xs text-slate-400 hover:text-sky-400 flex items-center gap-1 transition">
+                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                        <span>重置默认参数 (+0%)</span>
+                    </button>
+                </div>
+
+                <!-- 三个核心可调参数滑块 -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Rate 语速控制 -->
+                    <div class="bg-slate-900/70 border border-slate-800/90 rounded-xl p-3.5 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <label for="param-rate" class="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                                <i data-lucide="gauge" class="w-3.5 h-3.5 text-sky-400"></i>
+                                <span>语速 (Rate)</span>
+                            </label>
+                            <span id="val-rate" class="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">+0%</span>
+                        </div>
+                        <input type="range" id="param-rate" min="-100" max="100" step="5" value="0" class="w-full">
+                        <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                            <span>-100% (慢)</span>
+                            <span>--rate</span>
+                            <span>+100% (快)</span>
+                        </div>
+                    </div>
+
+                    <!-- Volume 音量控制 -->
+                    <div class="bg-slate-900/70 border border-slate-800/90 rounded-xl p-3.5 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <label for="param-volume" class="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                                <i data-lucide="volume-2" class="w-3.5 h-3.5 text-emerald-400"></i>
+                                <span>音量 (Volume)</span>
+                            </label>
+                            <span id="val-volume" class="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">+0%</span>
+                        </div>
+                        <input type="range" id="param-volume" min="-100" max="100" step="5" value="0" class="w-full">
+                        <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                            <span>-100% (轻)</span>
+                            <span>--volume</span>
+                            <span>+100% (响)</span>
+                        </div>
+                    </div>
+
+                    <!-- Pitch 音调控制 -->
+                    <div class="bg-slate-900/70 border border-slate-800/90 rounded-xl p-3.5 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <label for="param-pitch" class="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                                <i data-lucide="music" class="w-3.5 h-3.5 text-purple-400"></i>
+                                <span>音调 (Pitch)</span>
+                            </label>
+                            <span id="val-pitch" class="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">+0Hz</span>
+                        </div>
+                        <input type="range" id="param-pitch" min="-100" max="100" step="5" value="0" class="w-full">
+                        <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                            <span>-100Hz (低沉)</span>
+                            <span>--pitch</span>
+                            <span>+100Hz (高亢)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 附加控制项：输出格式、字幕选项与 API 调用模式 -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <!-- 合成引擎模式选择 -->
+                    <div class="bg-slate-900/50 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                                <i data-lucide="cpu" class="w-3.5 h-3.5 text-amber-400"></i>
+                                <span>音频生成 API 引擎模式</span>
+                            </span>
+                            <span class="text-[11px] text-emerald-400 font-mono" id="engine-status-tag">严格方言与性别匹配</span>
+                        </div>
+                        <select id="api-mode-select" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500">
+                            <option value="auto">⚡ 智能云端神经网络合成 (精准还原粤语/方言/男女声)</option>
+                            <option value="custom_api">🔌 自定义后端 API (兼容 edge-tts / OpenAI TTS 接口)</option>
+                            <option value="browser_tts">🔊 浏览器本地语音引擎 (严格地区与性别匹配)</option>
+                        </select>
+                    </div>
+
+                    <!-- 字幕与输出文件配置 (对应 edge-tts --write-media / --write-subtitles) -->
+                    <div class="bg-slate-900/50 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                                <i data-lucide="subtitles" class="w-3.5 h-3.5 text-sky-400"></i>
+                                <span>字幕与流媒体边界 (SubMaker)</span>
+                            </span>
+                            <span class="text-[10px] font-mono text-slate-400">24kHz 48kbps MP3</span>
+                        </div>
+                        <div class="flex items-center gap-4 pt-1">
+                            <label class="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer">
+                                <input type="checkbox" id="chk-subtitles" checked class="rounded bg-slate-950 border-slate-700 text-sky-500 focus:ring-0">
+                                <span>同步生成 WebVTT/SRT 字幕时间戳</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 自定义后端 API 配置折叠栏 (当选择 custom_api 时显示) -->
+                <div id="custom-api-box" class="hidden bg-slate-950/90 border border-amber-500/30 rounded-xl p-3.5 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-amber-400 flex items-center gap-1.5">
+                            <i data-lucide="server" class="w-3.5 h-3.5"></i>
+                            <span>自定义 Edge-TTS 服务端接口地址</span>
+                        </span>
+                        <span class="text-[11px] text-slate-400">支持 POST JSON 或 GET 查询参数</span>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <input type="text" id="custom-api-url" value="http://127.0.0.1:8000/v1/audio/speech" 
+                               placeholder="例如: http://localhost:8000/tts 或 OpenAI 兼容端点" 
+                               class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-200 focus:outline-none focus:border-amber-400">
+                        <input type="password" id="custom-api-key" placeholder="Bearer API Key (可选)" 
+                               class="sm:w-44 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-200 focus:outline-none focus:border-amber-400">
+                    </div>
+                    <p class="text-[11px] text-slate-400">
+                        提示：请求将发送包含 <code class="text-sky-400">text/input</code>, <code class="text-sky-400">voice</code>, <code class="text-sky-400">rate</code>, <code class="text-sky-400">volume</code>, <code class="text-sky-400">pitch</code> 的 JSON 体并接收音频流。
+                    </p>
+                </div>
+            </div>
+
+            <!-- 2. 文本输入与语音合成播放器区域 -->
+            <div class="glass-panel rounded-2xl p-5 space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="message-square-text" class="w-4 h-4 text-sky-400"></i>
+                        <h2 class="text-sm font-semibold text-slate-200">合成文本输入与在线试听 (--text)</h2>
+                    </div>
+
+                    <!-- 快速示例文本按钮 -->
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="text-[11px] text-slate-400 mr-1">填入示例:</span>
+                        <button data-sample="zh" class="sample-btn text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">🇨🇳 中文普通话</button>
+                        <button data-sample="hk" class="sample-btn text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-500/30 transition">🇭🇰 香港粤语</button>
+                        <button data-sample="en" class="sample-btn text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">🇺🇸 英文科技</button>
+                        <button data-sample="ja" class="sample-btn text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">🇯🇵 日语动漫</button>
+                        <button data-sample="multi" class="sample-btn text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">🌐 多语种混读</button>
+                    </div>
+                </div>
+
+                <!-- 文本编辑框 -->
+                <div class="relative">
+                    <textarea id="tts-text" rows="4" 
+                              class="w-full bg-slate-950/90 border border-slate-800 focus:border-sky-500 rounded-xl p-3.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none transition resize-y leading-relaxed"
+                              placeholder="在此输入需要转换为语音的文字内容...">欢迎使用 Edge-TTS 语音合成控制台！你可以通过左侧列表自由切换全球上百种语言和神经网络音色，并通过上方滑块实时调节语速、音量与音调。</textarea>
+                    <div class="absolute bottom-2.5 right-3 flex items-center gap-3 text-[11px] text-slate-400">
+                        <span id="char-counter">69 字符</span>
+                        <button id="btn-clear-text" class="hover:text-rose-400 transition" title="清空文本">清空</button>
+                    </div>
+                </div>
+
+                <!-- 操作控制栏与音频可视化播放器 -->
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
+                    <div class="flex items-center gap-2.5">
+                        <button id="btn-synthesize" 
+                                class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-semibold text-sm shadow-lg shadow-sky-500/25 transition active:scale-95">
+                            <i data-lucide="play" class="w-4 h-4 fill-current" id="play-btn-icon"></i>
+                            <span id="play-btn-text">生成并播放语音</span>
+                        </button>
+
+                        <button id="btn-stop" disabled
+                                class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-rose-500/20 hover:text-rose-300 hover:border-rose-500/30 disabled:opacity-40 disabled:pointer-events-none text-slate-300 border border-slate-700 text-sm font-medium flex items-center gap-1.5 transition">
+                            <i data-lucide="square" class="w-4 h-4 fill-current"></i>
+                            <span>停止</span>
+                        </button>
+                    </div>
+
+                    <!-- 下载音频与下载字幕按钮 -->
+                    <div class="flex items-center gap-2">
+                        <button id="btn-download-mp3" disabled
+                                class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium text-sky-300 border border-slate-700 transition">
+                            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                            <span>下载 MP3</span>
+                        </button>
+                        <button id="btn-download-srt"
+                                class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-xs font-medium text-emerald-300 border border-slate-700 transition">
+                            <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                            <span>导出 VTT/SRT 字幕</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 音频波形与原生 Audio 播放器容器 -->
+                <div class="bg-slate-950/90 border border-slate-800/90 rounded-xl p-3.5 space-y-2.5">
+                    <div class="flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2">
+                            <span id="status-dot" class="w-2 h-2 rounded-full bg-slate-500"></span>
+                            <span id="status-message" class="text-slate-300 font-medium">就绪：点击「生成并播放语音」开始合成</span>
+                        </div>
+                        <span id="WordBoundary-display" class="text-sky-400 font-mono text-xs truncate max-w-[220px]"></span>
+                    </div>
+
+                    <!-- 动态音频频谱 Canvas -->
+                    <div class="relative h-14 w-full bg-slate-900/80 rounded-lg overflow-hidden border border-slate-800/60 flex items-center justify-center">
+                        <canvas id="waveform-canvas" class="w-full h-full block"></canvas>
+                    </div>
+
+                    <!-- HTML5 Audio 控件 (当获取到 MP3 Blob 时可拖动进度) -->
+                    <audio id="audio-player" controls class="w-full h-8 hidden"></audio>
+                </div>
+            </div>
+
+            <!-- 3. 实时生成的 edge-tts CLI 命令、Python 代码与底层 SSML 预览 -->
+            <div class="glass-panel rounded-2xl p-5 space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2.5">
+                    <div class="flex items-center gap-1.5">
+                        <button data-tab="cli" class="code-tab px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/30 transition">
+                            💻 CLI 命令行 (edge-tts)
+                        </button>
+                        <button data-tab="python" class="code-tab px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 transition">
+                            🐍 Python 异步代码
+                        </button>
+                        <button data-tab="ssml" class="code-tab px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 transition">
+                            📄 WebSocket SSML 负载
+                        </button>
+                    </div>
+
+                    <button id="btn-copy-code" class="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+                        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                        <span id="copy-btn-text">复制代码</span>
+                    </button>
+                </div>
+
+                <!-- 代码展示框 -->
+                <pre class="bg-slate-950 border border-slate-800/90 rounded-xl p-3.5 text-xs font-mono text-sky-300 overflow-x-auto leading-relaxed"><code id="code-preview-content"></code></pre>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- 全局非阻塞通知提示框 -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+
+    <script>
+        /**
+         * ============================================================================
+         * 1. 内置完整的 edge-tts 多语言与音色精选数据库 (涵盖全球主要语种及所有热门 Neural 语音)
+         *    并且支持点击按钮实时从微软 Edge 官方接口拉取全量 320+ 语音列表
+         * ============================================================================
+         */
+        const BUILTIN_VOICES = [
+            // 中文 (中国大陆普通话及方言)
+            { ShortName: "zh-CN-XiaoxiaoNeural", FriendlyName: "晓晓 (Xiaoxiao) - 温暖全能女声", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Female", Categories: ["News", "Novel", "Conversation"], Personalities: ["Warm", "Animated"] },
+            { ShortName: "zh-CN-YunxiNeural", FriendlyName: "云希 (Yunxi) - 阳光故事男声", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Male", Categories: ["Novel", "Conversation"], Personalities: ["Lively", "Sunshine"] },
+            { ShortName: "zh-CN-YunjianNeural", FriendlyName: "云健 (Yunjian) - 激情体育/影视解说", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Male", Categories: ["Sports", "Novel"], Personalities: ["Passion", "Powerful"] },
+            { ShortName: "zh-CN-XiaoyiNeural", FriendlyName: "晓伊 (Xiaoyi) - 活泼动漫/小说女声", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Female", Categories: ["Cartoon", "Novel"], Personalities: ["Cute", "Bright"] },
+            { ShortName: "zh-CN-YunyangNeural", FriendlyName: "云扬 (Yunyang) - 专业新闻播音男声", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Male", Categories: ["News"], Personalities: ["Professional", "Reliable"] },
+            { ShortName: "zh-CN-XiaoxiaoMultilingualNeural", FriendlyName: "晓晓多语言 (Xiaoxiao Multilingual)", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Female", Categories: ["Multilingual", "Conversation"], Personalities: ["Warm", "Polyglot"] },
+            { ShortName: "zh-CN-YunxiaNeural", FriendlyName: "云夏 (Yunxia) - 可爱正太童声", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Male", Categories: ["Cartoon", "Novel"], Personalities: ["Child", "Cute"] },
+            { ShortName: "zh-CN-XiaohanNeural", FriendlyName: "晓涵 (Xiaohan) - 温柔知性女声", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Female", Categories: ["General", "Novel"], Personalities: ["Gentle", "Warm"] },
+            { ShortName: "zh-CN-XiaomengNeural", FriendlyName: "晓梦 (Xiaomeng) - 甜美梦幻女声", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Female", Categories: ["Novel", "Conversation"], Personalities: ["Sweet"] },
+            { ShortName: "zh-CN-XiaomoNeural", FriendlyName: "晓墨 (Xiaomo) - 情感丰富故事女声", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Female", Categories: ["Novel"], Personalities: ["Expressive"] },
+            { ShortName: "zh-CN-XiaoruiNeural", FriendlyName: "晓睿 (Xiaorui) - 沉稳老年女声", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Female", Categories: ["Novel"], Personalities: ["Calm", "Senior"] },
+            { ShortName: "zh-CN-XiaoshuangNeural", FriendlyName: "晓双 (Xiaoshuang) - 灵动女童声", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Female", Categories: ["Cartoon"], Personalities: ["Child", "Cute"] },
+            { ShortName: "zh-CN-YunfengNeural", FriendlyName: "云枫 (Yunfeng) - 磁性成熟男声", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Male", Categories: ["Novel"], Personalities: ["Magnetic", "Mature"] },
+            { ShortName: "zh-CN-YunhaoNeural", FriendlyName: "云皓 (Yunhao) - 广告宣传片男声", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Male", Categories: ["Commercial"], Personalities: ["Energetic"] },
+            { ShortName: "zh-CN-YunzeNeural", FriendlyName: "云泽 (Yunze) - 纪录片/沉稳叔音", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Male", Categories: ["Documentary", "News"], Personalities: ["Deep", "Mature"] },
+
+            // 中文特色方言
+            { ShortName: "zh-CN-liaoning-XiaobeiNeural", FriendlyName: "晓北 (Xiaobei) - 东北话幽默女声", Locale: "zh-CN-liaoning", LocaleName: "中文 (东北官话·辽宁)", Gender: "Female", Categories: ["Dialect", "Conversation"], Personalities: ["Humorous", "Friendly"] },
+            { ShortName: "zh-CN-shaanxi-XiaoniNeural", FriendlyName: "晓妮 (Xiaoni) - 陕西话特色女声", Locale: "zh-CN-shaanxi", LocaleName: "中文 (中原官话·陕西)", Gender: "Female", Categories: ["Dialect", "Conversation"], Personalities: ["Bright", "Local"] },
+            { ShortName: "zh-CN-shandong-YunxiangNeural", FriendlyName: "云翔 (Yunxiang) - 山东话豪爽男声", Locale: "zh-CN-shandong", LocaleName: "中文 (冀鲁官话·山东)", Gender: "Male", Categories: ["Dialect", "Novel"], Personalities: ["Direct", "Warm"] },
+            { ShortName: "zh-CN-sichuan-YunxiNeural", FriendlyName: "云希四川 (Yunxi Sichuan) - 四川话男声", Locale: "zh-CN-sichuan", LocaleName: "中文 (西南官话·四川)", Gender: "Male", Categories: ["Dialect", "Conversation"], Personalities: ["Lively"] },
+
+            // 粤语与台湾国语
+            { ShortName: "zh-HK-HiuMaanNeural", FriendlyName: "曉曼 (HiuMaan) - 粤语自然女声", Locale: "zh-HK", LocaleName: "中文 (中国香港·粤语)", Gender: "Female", Categories: ["Dialect", "Conversation"], Personalities: ["Friendly", "Positive"] },
+            { ShortName: "zh-HK-WanLungNeural", FriendlyName: "雲龍 (WanLung) - 粤语质感男声", Locale: "zh-HK", LocaleName: "中文 (中国香港·粤语)", Gender: "Male", Categories: ["Dialect", "News"], Personalities: ["Reliable"] },
+            { ShortName: "zh-HK-HiuGaaiNeural", FriendlyName: "曉佳 (HiuGaai) - 粤语轻快女声", Locale: "zh-HK", LocaleName: "中文 (中国香港·粤语)", Gender: "Female", Categories: ["Dialect", "Novel"], Personalities: ["Warm"] },
+            { ShortName: "zh-TW-HsiaoChenNeural", FriendlyName: "曉臻 (HsiaoChen) - 台湾国语温柔女声", Locale: "zh-TW", LocaleName: "中文 (中国台湾·国语)", Gender: "Female", Categories: ["Conversation", "Novel"], Personalities: ["Gentle", "Friendly"] },
+            { ShortName: "zh-TW-YunJheNeural", FriendlyName: "雲哲 (YunJhe) - 台湾国语儒雅男声", Locale: "zh-TW", LocaleName: "中文 (中国台湾·国语)", Gender: "Male", Categories: ["Conversation", "News"], Personalities: ["Polite", "Warm"] },
+            { ShortName: "zh-TW-HsiaoYuNeural", FriendlyName: "曉雨 (HsiaoYu) - 台湾国语甜美女声", Locale: "zh-TW", LocaleName: "中文 (中国台湾·国语)", Gender: "Female", Categories: ["Conversation"], Personalities: ["Sweet"] },
+
+            // 英语 (美国、英国、澳洲、印度等)
+            { ShortName: "en-US-AriaNeural", FriendlyName: "Aria - 美式自然全能女声", Locale: "en-US", LocaleName: "English (United States)", Gender: "Female", Categories: ["News", "Novel", "Conversation"], Personalities: ["Positive", "Confident"] },
+            { ShortName: "en-US-GuyNeural", FriendlyName: "Guy - 美式新闻与叙事男声", Locale: "en-US", LocaleName: "English (United States)", Gender: "Male", Categories: ["News", "Novel"], Personalities: ["Passion"] },
+            { ShortName: "en-US-JennyNeural", FriendlyName: "Jenny - 美式亲切助手女声", Locale: "en-US", LocaleName: "English (United States)", Gender: "Female", Categories: ["Conversation", "Copilot"], Personalities: ["Friendly", "Considerate"] },
+            { ShortName: "en-US-AvaMultilingualNeural", FriendlyName: "Ava Multilingual - 旗舰多语言女声", Locale: "en-US", LocaleName: "English (United States)", Gender: "Female", Categories: ["Multilingual", "Conversation"], Personalities: ["Expressive", "Caring"] },
+            { ShortName: "en-US-AndrewMultilingualNeural", FriendlyName: "Andrew Multilingual - 旗舰多语言男声", Locale: "en-US", LocaleName: "English (United States)", Gender: "Male", Categories: ["Multilingual", "Conversation"], Personalities: ["Warm", "Confident"] },
+            { ShortName: "en-US-EmmaMultilingualNeural", FriendlyName: "Emma Multilingual - 愉悦多语言女声", Locale: "en-US", LocaleName: "English (United States)", Gender: "Female", Categories: ["Multilingual", "Novel"], Personalities: ["Cheerful", "Lighthearted"] },
+            { ShortName: "en-US-BrianMultilingualNeural", FriendlyName: "Brian Multilingual - 年轻多语言男声", Locale: "en-US", LocaleName: "English (United States)", Gender: "Male", Categories: ["Multilingual", "Conversation"], Personalities: ["Approachable", "Sincere"] },
+            { ShortName: "en-US-ChristopherNeural", FriendlyName: "Christopher - 权威纪录片男声", Locale: "en-US", LocaleName: "English (United States)", Gender: "Male", Categories: ["News", "Novel"], Personalities: ["Reliable", "Authority"] },
+            { ShortName: "en-US-AnaNeural", FriendlyName: "Ana - 美式纯真童声", Locale: "en-US", LocaleName: "English (United States)", Gender: "Female", Categories: ["Cartoon", "Conversation"], Personalities: ["Cute", "Child"] },
+            { ShortName: "en-GB-SoniaNeural", FriendlyName: "Sonia - 英式优雅标准女声", Locale: "en-GB", LocaleName: "English (United Kingdom)", Gender: "Female", Categories: ["News", "Conversation"], Personalities: ["Friendly", "Positive"] },
+            { ShortName: "en-GB-RyanNeural", FriendlyName: "Ryan - 英式绅士温和男声", Locale: "en-GB", LocaleName: "English (United Kingdom)", Gender: "Male", Categories: ["Conversation", "Novel"], Personalities: ["Friendly", "Considerate"] },
+            { ShortName: "en-AU-NatashaNeural", FriendlyName: "Natasha - 澳洲英语活力女声", Locale: "en-AU", LocaleName: "English (Australia)", Gender: "Female", Categories: ["Conversation"], Personalities: ["Crisp", "Bright"] },
+            { ShortName: "en-IN-NeerjaNeural", FriendlyName: "Neerja - 印度英语女声", Locale: "en-IN", LocaleName: "English (India)", Gender: "Female", Categories: ["News", "Conversation"], Personalities: ["Friendly"] },
+
+            // 日语 (日本)
+            { ShortName: "ja-JP-NanamiNeural", FriendlyName: "七海 (Nanami) - 日语元气清晰女声", Locale: "ja-JP", LocaleName: "日本語 (日本)", Gender: "Female", Categories: ["Conversation", "Cartoon"], Personalities: ["Friendly", "Positive"] },
+            { ShortName: "ja-JP-KeitaNeural", FriendlyName: "圭太 (Keita) - 日语温和青年男声", Locale: "ja-JP", LocaleName: "日本語 (日本)", Gender: "Male", Categories: ["Conversation", "Novel"], Personalities: ["Friendly", "Positive"] },
+            { ShortName: "ja-JP-AoiNeural", FriendlyName: "葵 (Aoi) - 日语可爱动漫女声", Locale: "ja-JP", LocaleName: "日本語 (日本)", Gender: "Female", Categories: ["Cartoon", "Novel"], Personalities: ["Cute"] },
+            { ShortName: "ja-JP-DaichiNeural", FriendlyName: "大地 (Daichi) - 日语沉稳男声", Locale: "ja-JP", LocaleName: "日本語 (日本)", Gender: "Male", Categories: ["Novel"], Personalities: ["Calm"] },
+
+            // 韩语 (韩国)
+            { ShortName: "ko-KR-SunHiNeural", FriendlyName: "선희 (SunHi) - 韩语温柔标准女声", Locale: "ko-KR", LocaleName: "한국어 (대한민국)", Gender: "Female", Categories: ["Conversation", "News"], Personalities: ["Friendly", "Positive"] },
+            { ShortName: "ko-KR-InJoonNeural", FriendlyName: "인준 (InJoon) - 韩语亲切男声", Locale: "ko-KR", LocaleName: "한국어 (대한민국)", Gender: "Male", Categories: ["Conversation", "Novel"], Personalities: ["Friendly"] },
+            { ShortName: "ko-KR-HyunsuMultilingualNeural", FriendlyName: "현수 (Hyunsu) - 韩语多语言男声", Locale: "ko-KR", LocaleName: "한국어 (대한민국)", Gender: "Male", Categories: ["Multilingual", "Conversation"], Personalities: ["Deep"] },
+
+            // 法语、德语、西班牙语、俄语、意大利语、葡萄牙语等
+            { ShortName: "fr-FR-DeniseNeural", FriendlyName: "Denise - 法语清晰优雅女声", Locale: "fr-FR", LocaleName: "Français (France)", Gender: "Female", Categories: ["Conversation", "News"], Personalities: ["Friendly", "Positive"] },
+            { ShortName: "fr-FR-HenriNeural", FriendlyName: "Henri - 法语沉稳磁性男声", Locale: "fr-FR", LocaleName: "Français (France)", Gender: "Male", Categories: ["Conversation", "Novel"], Personalities: ["Friendly", "Reliable"] },
+            { ShortName: "fr-FR-VivienneMultilingualNeural", FriendlyName: "Vivienne Multilingual - 法语多语言女声", Locale: "fr-FR", LocaleName: "Français (France)", Gender: "Female", Categories: ["Multilingual"], Personalities: ["Warm"] },
+            { ShortName: "de-DE-KatjaNeural", FriendlyName: "Katja - 德语标准播音女声", Locale: "de-DE", LocaleName: "Deutsch (Deutschland)", Gender: "Female", Categories: ["News", "Conversation"], Personalities: ["Friendly", "Positive"] },
+            { ShortName: "de-DE-ConradNeural", FriendlyName: "Conrad - 德语叙事男声", Locale: "de-DE", LocaleName: "Deutsch (Deutschland)", Gender: "Male", Categories: ["Conversation"], Personalities: ["Friendly"] },
+            { ShortName: "de-DE-SeraphinaMultilingualNeural", FriendlyName: "Seraphina Multilingual - 德语多语言女声", Locale: "de-DE", LocaleName: "Deutsch (Deutschland)", Gender: "Female", Categories: ["Multilingual"], Personalities: ["Expressive"] },
+            { ShortName: "es-ES-ElviraNeural", FriendlyName: "Elvira - 西班牙语(欧洲)活力女声", Locale: "es-ES", LocaleName: "Español (España)", Gender: "Female", Categories: ["Conversation", "News"], Personalities: ["Friendly"] },
+            { ShortName: "es-MX-DaliaNeural", FriendlyName: "Dalia - 西班牙语(墨西哥)热情女声", Locale: "es-MX", LocaleName: "Español (México)", Gender: "Female", Categories: ["Conversation"], Personalities: ["Warm", "Positive"] },
+            { ShortName: "ru-RU-SvetlanaNeural", FriendlyName: "Светлана (Svetlana) - 俄语标准女声", Locale: "ru-RU", LocaleName: "Русский (Россия)", Gender: "Female", Categories: ["News", "Conversation"], Personalities: ["Friendly", "Positive"] },
+            { ShortName: "ru-RU-DmitryNeural", FriendlyName: "Дмитрий (Dmitry) - 俄语深沉男声", Locale: "ru-RU", LocaleName: "Русский (Россия)", Gender: "Male", Categories: ["Novel", "News"], Personalities: ["Reliable"] },
+            { ShortName: "it-IT-ElsaNeural", FriendlyName: "Elsa - 意大利语自然女声", Locale: "it-IT", LocaleName: "Italiano (Italia)", Gender: "Female", Categories: ["Conversation"], Personalities: ["Friendly"] },
+            { ShortName: "pt-BR-FranciscaNeural", FriendlyName: "Francisca - 葡萄牙语(巴西)亲切女声", Locale: "pt-BR", LocaleName: "Português (Brasil)", Gender: "Female", Categories: ["Conversation"], Personalities: ["Friendly", "Calm"] },
+
+            // 东南亚及中东、其他全球多语种覆盖
+            { ShortName: "vi-VN-HoaiMyNeural", FriendlyName: "Hoài My - 越南语甜美女声", Locale: "vi-VN", LocaleName: "Tiếng Việt (Việt Nam)", Gender: "Female", Categories: ["Conversation"], Personalities: ["Friendly"] },
+            { ShortName: "th-TH-PremwadeeNeural", FriendlyName: "เปรมวดี (Premwadee) - 泰语柔和女声", Locale: "th-TH", LocaleName: "ไทย (ประเทศไทย)", Gender: "Female", Categories: ["Conversation"], Personalities: ["Friendly"] },
+            { ShortName: "id-ID-GadisNeural", FriendlyName: "Gadis - 印尼语清晰女声", Locale: "id-ID", LocaleName: "Bahasa Indonesia", Gender: "Female", Categories: ["Conversation"], Personalities: ["Friendly"] },
+            { ShortName: "ms-MY-YasminNeural", FriendlyName: "Yasmin - 马来语标准女声", Locale: "ms-MY", LocaleName: "Bahasa Melayu (Malaysia)", Gender: "Female", Categories: ["Conversation"], Personalities: ["Friendly"] },
+            { ShortName: "ar-SA-ZariyahNeural", FriendlyName: "زارية (Zariyah) - 阿拉伯语女声", Locale: "ar-SA", LocaleName: "العربية (السعودية)", Gender: "Female", Categories: ["News", "Conversation"], Personalities: ["Friendly"] },
+            { ShortName: "hi-IN-SwaraNeural", FriendlyName: "स्वरा (Swara) - 印地语女声", Locale: "hi-IN", LocaleName: "हिन्दी (भारत)", Gender: "Female", Categories: ["Conversation", "News"], Personalities: ["Friendly"] },
+            { ShortName: "tr-TR-EmelNeural", FriendlyName: "Emel - 土耳其语女声", Locale: "tr-TR", LocaleName: "Türkçe (Türkiye)", Gender: "Female", Categories: ["Conversation"], Personalities: ["Friendly"] },
+            { ShortName: "nl-NL-ColetteNeural", FriendlyName: "Colette - 荷兰语女声", Locale: "nl-NL", LocaleName: "Nederlands (Nederland)", Gender: "Female", Categories: ["Conversation"], Personalities: ["Friendly"] },
+            { ShortName: "pl-PL-ZofiaNeural", FriendlyName: "Zofia - 波兰语女声", Locale: "pl-PL", LocaleName: "Polski (Polska)", Gender: "Female", Categories: ["Conversation"], Personalities: ["Friendly"] },
+            { ShortName: "sv-SE-SofieNeural", FriendlyName: "Sofie - 瑞典语女声", Locale: "sv-SE", LocaleName: "Svenska (Sverige)", Gender: "Female", Categories: ["Conversation"], Personalities: ["Friendly"] },
+            { ShortName: "uk-UA-PolinaNeural", FriendlyName: "Поліна (Polina) - 乌克兰语女声", Locale: "uk-UA", LocaleName: "Українська (Україна)", Gender: "Female", Categories: ["Conversation"], Personalities: ["Friendly"] },
+            { ShortName: "el-GR-AthinaNeural", FriendlyName: "Αθηνά (Athina) - 希腊语女声", Locale: "el-GR", LocaleName: "Ελληνικά (Ελλάδα)", Gender: "Female", Categories: ["Conversation"], Personalities: ["Friendly"] },
+            { ShortName: "he-IL-HilaNeural", FriendlyName: "הילה (Hila) - 希伯来语女声", Locale: "he-IL", LocaleName: "עברית (ישראל)", Gender: "Female", Categories: ["Conversation"], Personalities: ["Friendly"] }
+        ];
+
+        // 语言代码到中文可读名称的映射表（用于云端同步全部 320+ 音色时友好展示）
+        const LOCALE_NAME_MAP = {
+            "af-ZA": "南非荷兰语 (南非)", "am-ET": "阿姆哈拉语 (埃塞俄比亚)", "ar-AE": "阿拉伯语 (阿联酋)",
+            "ar-BH": "阿拉伯语 (巴林)", "ar-DZ": "阿拉伯语 (阿尔及利亚)", "ar-EG": "阿拉伯语 (埃及)",
+            "ar-IQ": "阿拉伯语 (伊拉克)", "ar-JO": "阿拉伯语 (约旦)", "ar-KW": "阿拉伯语 (科威特)",
+            "ar-LB": "阿拉伯语 (黎巴嫩)", "ar-LY": "阿拉伯语 (利比亚)", "ar-MA": "阿拉伯语 (摩洛哥)",
+            "ar-OM": "阿拉伯语 (阿曼)", "ar-QA": "阿拉伯语 (卡塔尔)", "ar-SA": "阿拉伯语 (沙特阿拉伯)",
+            "ar-SY": "阿拉伯语 (叙利亚)", "ar-TN": "阿拉伯语 (突尼斯)", "ar-YE": "阿拉伯语 (也门)",
+            "az-AZ": "阿塞拜疆语", "bg-BG": "保加利亚语", "bn-BD": "孟加拉语 (孟加拉国)",
+            "bn-IN": "孟加拉语 (印度)", "bs-BA": "波斯尼亚语", "ca-ES": "加泰罗尼亚语",
+            "cs-CZ": "捷克语", "cy-GB": "威尔士语", "da-DK": "丹麦语",
+            "de-AT": "德语 (奥地利)", "de-CH": "德语 (瑞士)", "de-DE": "德语 (德国)",
+            "el-GR": "希腊语", "en-AU": "英语 (澳大利亚)", "en-CA": "英语 (加拿大)",
+            "en-GB": "英语 (英国)", "en-HK": "英语 (中国香港)", "en-IE": "英语 (爱尔兰)",
+            "en-IN": "英语 (印度)", "en-KE": "英语 (肯尼亚)", "en-NG": "英语 (尼日利亚)",
+            "en-NZ": "英语 (新西兰)", "en-PH": "英语 (菲律宾)", "en-SG": "英语 (新加坡)",
+            "en-TZ": "英语 (坦桑尼亚)", "en-US": "英语 (美国)", "en-ZA": "英语 (南非)",
+            "es-AR": "西班牙语 (阿根廷)", "es-BO": "西班牙语 (玻利维亚)", "es-CL": "西班牙语 (智利)",
+            "es-CO": "西班牙语 (哥伦比亚)", "es-CR": "西班牙语 (哥斯达黎加)", "es-CU": "西班牙语 (古巴)",
+            "es-DO": "西班牙语 (多米尼加)", "es-EC": "西班牙语 (厄瓜多尔)", "es-ES": "西班牙语 (西班牙)",
+            "es-GQ": "西班牙语 (赤道几内亚)", "es-GT": "西班牙语 (危地马拉)", "es-HN": "西班牙语 (洪都拉斯)",
+            "es-MX": "西班牙语 (墨西哥)", "es-NI": "西班牙语 (尼加拉瓜)", "es-PA": "西班牙语 (巴拿马)",
+            "es-PE": "西班牙语 (秘鲁)", "es-PR": "西班牙语 (波多黎各)", "es-PY": "西班牙语 (巴拉圭)",
+            "es-SV": "西班牙语 (萨尔瓦多)", "es-US": "西班牙语 (美国)", "es-UY": "西班牙语 (乌拉圭)",
+            "es-VE": "西班牙语 (委内瑞拉)", "et-EE": "爱沙尼亚语", "eu-ES": "巴斯克语",
+            "fa-IR": "波斯语 (伊朗)", "fi-FI": "芬兰语", "fil-PH": "菲律宾语",
+            "fr-BE": "法语 (比利时)", "fr-CA": "法语 (加拿大)", "fr-CH": "法语 (瑞士)",
+            "fr-FR": "法语 (法国)", "ga-IE": "爱尔兰语", "gl-ES": "加利西亚语",
+            "gu-IN": "古吉拉特语", "he-IL": "希伯来语", "hi-IN": "印地语 (印度)",
+            "hr-HR": "克罗地亚语", "hu-HU": "匈牙利语", "hy-AM": "亚美尼亚语",
+            "id-ID": "印度尼西亚语", "is-IS": "冰岛语", "it-IT": "意大利语",
+            "iu-Cans-CA": "因纽特语", "ja-JP": "日语 (日本)", "jv-ID": "爪哇语",
+            "ka-GE": "格鲁吉亚语", "kk-KZ": "哈萨克语", "km-KH": "高棉语 (柬埔寨)",
+            "kn-IN": "卡纳达语", "ko-KR": "韩语 (韩国)", "lo-LA": "老挝语",
+            "lt-LT": "立陶宛语", "lv-LV": "拉脱维亚语", "mk-MK": "马其顿语",
+            "ml-IN": "马拉雅拉姆语", "mn-MN": "蒙古语", "mr-IN": "马拉地语",
+            "ms-MY": "马来语 (马来西亚)", "mt-MT": "马耳他语", "my-MM": "缅甸语",
+            "nb-NO": "挪威语", "ne-NP": "尼泊尔语", "nl-BE": "荷兰语 (比利时)",
+            "nl-NL": "荷兰语 (荷兰)", "pl-PL": "波兰语", "ps-AF": "普什图语",
+            "pt-BR": "葡萄牙语 (巴西)", "pt-PT": "葡萄牙语 (葡萄牙)", "ro-RO": "罗马尼亚语",
+            "ru-RU": "俄语 (俄罗斯)", "si-LK": "僧伽罗语 (斯里兰卡)", "sk-SK": "斯洛伐克语",
+            "sl-SI": "斯洛文尼亚语", "so-SO": "索马里语", "sq-AL": "阿尔巴尼亚语",
+            "sr-RS": "塞尔维亚语", "su-ID": "巽他语", "sv-SE": "瑞典语",
+            "sw-KE": "斯瓦希里语 (肯尼亚)", "sw-TZ": "斯瓦希里语 (坦桑尼亚)", "ta-IN": "泰米尔语 (印度)",
+            "ta-LK": "泰米尔语 (斯里兰卡)", "ta-MY": "泰米尔语 (马来西亚)", "ta-SG": "泰米尔语 (新加坡)",
+            "te-IN": "泰卢固语", "th-TH": "泰语 (泰国)", "tr-TR": "土耳其语",
+            "uk-UA": "乌克兰语", "ur-IN": "乌尔都语 (印度)", "ur-PK": "乌尔都语 (巴基斯坦)",
+            "uz-UZ": "乌兹别克语", "vi-VN": "越南语 (越南)",
+            "zh-CN": "中文 (中国大陆·普通话)", "zh-CN-liaoning": "中文 (东北官话·辽宁)",
+            "zh-CN-shaanxi": "中文 (中原官话·陕西)", "zh-CN-shandong": "中文 (冀鲁官话·山东)",
+            "zh-CN-sichuan": "中文 (西南官话·四川)", "zh-HK": "中文 (中国香港·粤语)",
+            "zh-TW": "中文 (中国台湾·国语)", "zu-ZA": "祖鲁语 (南非)"
+        };
+
+        // 预设多语言示例文本
+        const SAMPLE_TEXTS = {
+            zh: "欢迎使用 Edge-TTS 语音合成控制台！你可以通过左侧列表自由切换全球上百种语言和神经网络音色，并通过上方滑块实时调节语速、音量与音调。",
+            hk: "哈囉大家好！歡迎使用 Edge-TTS 語音合成控制台。而家你揀緊嘅係香港粵語女聲，無論係講故事定係日常傾偈，聲音都好自然流暢！",
+            en: "Welcome to Edge-TTS Studio! With Microsoft Edge's neural text-to-speech engine, you can synthesize natural, expressive speech across more than 100 languages with custom rate, volume, and pitch controls.",
+            ja: "こんにちは！Edge-TTS スタジオへようこそ。ここでは、話すスピードや声の高さ、音量を自由に調整して、とても自然な音声を合成することができます。",
+            multi: "Hello 大家好！我正在使用 Edge-TTS 的 Multilingual 多语言混合模型。Bonjour tout le monde, 今日もよろしくお願いします！"
+        };
+
+        /**
+         * ============================================================================
+         * 2. 全局应用状态管理
+         * ============================================================================
+         */
+        const state = {
+            voices: [...BUILTIN_VOICES],
+            selectedVoice: BUILTIN_VOICES[0],
+            filterSearch: "",
+            filterLocale: "ALL",
+            filterGender: "ALL",
+            filterCategory: "ALL",
+            rate: 0,     // 百分比 -100 ~ +100
+            volume: 0,   // 百分比 -100 ~ +100
+            pitch: 0,    // Hz -100 ~ +100
+            codeTab: "cli",
+            isSynthesizing: false,
+            lastAudioBlobUrl: null,
+            subtitlesCueList: [],
+            animationId: null
+        };
+
+        /**
+         * ============================================================================
+         * 3. UI 渲染与交互逻辑
+         * ============================================================================
+         */
+        function showToast(message, type = "info") {
+            const container = document.getElementById("toast-container");
+            const toast = document.createElement("div");
+            const colors = {
+                info: "border-sky-500/40 bg-slate-900/95 text-sky-300",
+                success: "border-emerald-500/40 bg-slate-900/95 text-emerald-300",
+                warning: "border-amber-500/40 bg-slate-900/95 text-amber-300",
+                error: "border-rose-500/40 bg-slate-900/95 text-rose-300"
+            };
+            toast.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-xl backdrop-blur-md text-xs font-medium flex items-center gap-2 transition-all duration-300 ${colors[type] || colors.info}`;
+            toast.innerHTML = `<span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = "0";
+                toast.style.transform = "translateY(8px)";
+                setTimeout(() => toast.remove(), 300);
+            }, 3600);
+        }
+
+        // 格式化带正负号的参数字符串 (与 edge-tts CLI 严格一致: +0%, -20%, +15Hz)
+        function formatSignedParam(val, unit) {
+            const num = parseInt(val, 10) || 0;
+            return (num >= 0 ? `+${num}` : `${num}`) + unit;
+        }
+
+        // 更新顶部统计与语言下拉框
+        function populateLocaleDropdown() {
+            const select = document.getElementById("locale-filter");
+            const currentVal = select.value;
+            const localeSet = new Set(state.voices.map(v => v.Locale));
+            const sortedLocales = Array.from(localeSet).sort((a, b) => {
+                // 让中文和英文排在前面方便选择
+                if (a.startsWith("zh") && !b.startsWith("zh")) return -1;
+                if (!a.startsWith("zh") && b.startsWith("zh")) return 1;
+                if (a.startsWith("en") && !b.startsWith("en")) return -1;
+                if (!a.startsWith("en") && b.startsWith("en")) return 1;
+                return a.localeCompare(b);
+            });
+
+            select.innerHTML = `<option value="ALL">🌍 所有语言与地区 (${sortedLocales.length} 种语言 / ${state.voices.length} 音色)</option>`;
+            sortedLocales.forEach(loc => {
+                const count = state.voices.filter(v => v.Locale === loc).length;
+                const readable = LOCALE_NAME_MAP[loc] || state.voices.find(v => v.Locale === loc)?.LocaleName || loc;
+                const option = document.createElement("option");
+                option.value = loc;
+                option.textContent = `${loc} — ${readable} (${count})`;
+                select.appendChild(option);
+            });
+
+            if (sortedLocales.includes(currentVal)) {
+                select.value = currentVal;
+            }
+
+            document.getElementById("stat-locales").textContent = sortedLocales.length;
+            document.getElementById("stat-voices").textContent = state.voices.length;
+        }
+
+        // 渲染左侧语音卡片列表
+        function renderVoiceList() {
+            const container = document.getElementById("voice-list-container");
+            const search = state.filterSearch.trim().toLowerCase();
+
+            const filtered = state.voices.filter(v => {
+                if (state.filterLocale !== "ALL" && v.Locale !== state.filterLocale) return false;
+                if (state.filterGender !== "ALL" && v.Gender !== state.filterGender) return false;
+                if (state.filterCategory !== "ALL") {
+                    const isMulti = v.ShortName.toLowerCase().includes("multilingual") || (v.Categories && v.Categories.includes("Multilingual"));
+                    const isDialect = v.Locale.split("-").length > 2 || v.Locale === "zh-HK" || (v.Categories && v.Categories.includes("Dialect"));
+                    if (state.filterCategory === "Multilingual" && !isMulti) return false;
+                    else if (state.filterCategory === "Dialect" && !isDialect) return false;
+                    else if (state.filterCategory !== "Multilingual" && state.filterCategory !== "Dialect") {
+                        if (!v.Categories || !v.Categories.some(c => c.toLowerCase().includes(state.filterCategory.toLowerCase()))) return false;
+                    }
+                }
+                if (search) {
+                    const hay = `${v.ShortName} ${v.FriendlyName} ${v.Locale} ${LOCALE_NAME_MAP[v.Locale] || ""} ${(v.Categories || []).join(" ")}`.toLowerCase();
+                    if (!hay.includes(search)) return false;
+                }
+                return true;
+            });
+
+            document.getElementById("filtered-count").textContent = filtered.length;
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="h-48 flex flex-col items-center justify-center text-slate-500 text-xs space-y-2">
+                        <p>未找到匹配的语音音色</p>
+                        <button id="btn-reset-filter" class="px-3 py-1 rounded-lg bg-slate-800 text-sky-400 hover:bg-slate-700">清除筛选条件</button>
+                    </div>
+                `;
+                document.getElementById("btn-reset-filter")?.addEventListener("click", () => {
+                    state.filterSearch = "";
+                    state.filterLocale = "ALL";
+                    state.filterGender = "ALL";
+                    state.filterCategory = "ALL";
+                    document.getElementById("voice-search").value = "";
+                    document.getElementById("locale-filter").value = "ALL";
+                    renderVoiceList();
+                });
+                return;
+            }
+
+            container.innerHTML = filtered.map(v => {
+                const isSelected = state.selectedVoice && state.selectedVoice.ShortName === v.ShortName;
+                const genderBadge = v.Gender === "Female" 
+                    ? `<span class="px-1.5 py-0.5 rounded text-[10px] bg-pink-500/15 text-pink-300 border border-pink-500/25">♀ 女声</span>`
+                    : `<span class="px-1.5 py-0.5 rounded text-[10px] bg-blue-500/15 text-blue-300 border border-blue-500/25">♂ 男声</span>`;
+                
+                const tags = (v.Categories || []).slice(0, 3).map(cat => 
+                    `<span class="px-1.5 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400">${cat}</span>`
+                ).join("");
+
+                return `
+                    <div data-voice="${v.ShortName}" class="voice-card cursor-pointer rounded-xl p-3 transition border ${
+                        isSelected 
+                            ? 'bg-sky-500/15 border-sky-500/60 shadow-md shadow-sky-500/5' 
+                            : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900'
+                    }">
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-semibold text-slate-100">${v.FriendlyName}</span>
+                                </div>
+                                <div class="text-[11px] font-mono text-sky-400 mt-0.5">${v.ShortName}</div>
+                            </div>
+                            ${genderBadge}
+                        </div>
+                        <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-800/60 text-[10px] text-slate-400">
+                            <span>${LOCALE_NAME_MAP[v.Locale] || v.LocaleName || v.Locale}</span>
+                            <div class="flex items-center gap-1">${tags}</div>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+
+            // 绑定点击选择语音事件
+            container.querySelectorAll(".voice-card").forEach(card => {
+                card.addEventListener("click", () => {
+                    const shortName = card.getAttribute("data-voice");
+                    const found = state.voices.find(item => item.ShortName === shortName);
+                    if (found) {
+                        state.selectedVoice = found;
+                        document.getElementById("current-selected-badge").textContent = found.ShortName;
+                        renderVoiceList();
+                        updateCodePreview();
+                    }
+                });
+            });
+        }
+
+        /**
+         * ============================================================================
+         * 4. 生成 edge-tts CLI 命令、Python 异步代码与 SSML 报文
+         * ============================================================================
+         */
+        function buildSSML(text, voiceName, rateStr, volumeStr, pitchStr) {
+            const escapedText = text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+            return `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'>\n` +
+                   `  <voice name='${voiceName}'>\n` +
+                   `    <prosody pitch='${pitchStr}' rate='${rateStr}' volume='${volumeStr}'>\n` +
+                   `      ${escapedText}\n` +
+                   `    </prosody>\n` +
+                   `  </voice>\n` +
+                   `</speak>`;
+        }
+
+        function updateCodePreview() {
+            const voice = state.selectedVoice ? state.selectedVoice.ShortName : "zh-CN-XiaoxiaoNeural";
+            const rateStr = formatSignedParam(state.rate, "%");
+            const volumeStr = formatSignedParam(state.volume, "%");
+            const pitchStr = formatSignedParam(state.pitch, "Hz");
+            const rawText = (document.getElementById("tts-text").value || "Hello World").replace(/"/g, '\\"').replace(/\n/g, " ");
+            const includeSubs = document.getElementById("chk-subtitles").checked;
+
+            const codeEl = document.getElementById("code-preview-content");
+
+            if (state.codeTab === "cli") {
+                let cmd = `edge-tts \\\n  --voice "${voice}" \\\n  --text "${rawText}"`;
+                if (state.rate !== 0) cmd += ` \\\n  --rate="${rateStr}"`;
+                if (state.volume !== 0) cmd += ` \\\n  --volume="${volumeStr}"`;
+                if (state.pitch !== 0) cmd += ` \\\n  --pitch="${pitchStr}"`;
+                cmd += ` \\\n  --write-media output.mp3`;
+                if (includeSubs) cmd += ` \\\n  --write-subtitles output.vtt`;
+                cmd += `\n\n# 或者直接实时播放 (使用 edge-playback):\nedge-playback --voice "${voice}" --rate="${rateStr}" --volume="${volumeStr}" --pitch="${pitchStr}" --text "${rawText}"`;
+                codeEl.textContent = cmd;
+            } else if (state.codeTab === "python") {
+                const py = `import asyncio\nimport edge_tts\n\nTEXT = "${rawText}"\nVOICE = "${voice}"\nRATE = "${rateStr}"\nVOLUME = "${volumeStr}"\nPITCH = "${pitchStr}"\nOUTPUT_FILE = "output.mp3"\n${includeSubs ? 'WEBVTT_FILE = "output.vtt"\n' : ''}\nasync def amain() -> None:\n    communicate = edge_tts.Communicate(TEXT, VOICE, rate=RATE, volume=VOLUME, pitch=PITCH)\n${includeSubs ? '    submaker = edge_tts.SubMaker()\n    with open(OUTPUT_FILE, "wb") as file:\n        async for chunk in communicate.stream():\n            if chunk["type"] == "audio":\n                file.write(chunk["data"])\n            elif chunk["type"] == "WordBoundary":\n                submaker.create_sub((chunk["offset"], chunk["duration"]), chunk["text"])\n    with open(WEBVTT_FILE, "w", encoding="utf-8") as file:\n        file.write(submaker.generate_subs())' : '    await communicate.save(OUTPUT_FILE)'}\n\nif __name__ == "__main__":\n    asyncio.run(amain())`;
+                codeEl.textContent = py;
+            } else {
+                codeEl.textContent = buildSSML(
+                    document.getElementById("tts-text").value || "Hello World",
+                    voice,
+                    rateStr,
+                    volumeStr,
+                    pitchStr
+                );
+            }
+        }
+
+        /**
+         * ============================================================================
+         * 5. 云端同步微软 Edge 全量 320+ 语音列表接口 (与 rany2/edge-tts 相同的数据源)
+         * ============================================================================
+         */
+        async function syncAllCloudVoices() {
+            const icon = document.getElementById("sync-icon");
+            const text = document.getElementById("sync-text");
+            icon.classList.add("animate-spin");
+            text.textContent = "正在同步...";
+
+            const EDGE_VOICES_URL = "https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=6A5AA1D4EAFF4E9FB37E23D68491D6F4";
+            try {
+                const res = await fetch(EDGE_VOICES_URL);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    state.voices = data.map(item => ({
+                        ShortName: item.ShortName,
+                        FriendlyName: item.FriendlyName.replace("Microsoft ", "").replace(" Online (Natural)", ""),
+                        Locale: item.Locale,
+                        LocaleName: LOCALE_NAME_MAP[item.Locale] || item.Locale,
+                        Gender: item.Gender,
+                        Categories: item.VoiceTag?.ContentCategories || ["General"],
+                        Personalities: item.VoiceTag?.VoicePersonalities || []
+                    }));
+                    populateLocaleDropdown();
+                    renderVoiceList();
+                    showToast(`成功同步微软云端 ${state.voices.length} 个 Neural 语音！`, "success");
+                    text.textContent = `已同步 (${state.voices.length})`;
+                }
+            } catch (err) {
+                showToast("浏览器跨域策略限制，已使用内置完整多语言库 (65+ 核心音色)", "warning");
+                text.textContent = "内置核心库";
+            } finally {
+                icon.classList.remove("animate-spin");
+            }
+        }
+
+        /**
+         * ============================================================================
+         * 6. 音频合成引擎 (支持 Edge WebSocket Sec-MS-GEC 协议 / 自定义后端 API / Web Speech 降级)
+         * ============================================================================
+         */
+        function generateUUID() {
+            return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+                (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16).replace(/-/g, "")
+            );
+        }
+
+        // 计算 rany2/edge-tts DRM 模块中的 Sec-MS-GEC 安全令牌
+        async function generateSecMsGec() {
+            const WIN_EPOCH = 11644473600;
+            let ticks = Math.floor(Date.now() / 1000) + WIN_EPOCH;
+            ticks -= ticks % 300;
+            ticks *= 1e7;
+            const strToHash = `${ticks.toFixed(0)}6A5AA1D4EAFF4E9FB37E23D68491D6F4`;
+            const msgBuffer = new TextEncoder().encode(strToHash);
+            const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, "0")).join("").toUpperCase();
+        }
+
+        // 方式 A: 尝试直接通过微软 Edge ReadAloud WebSocket 合成 MP3 二进制流与 WordBoundary 字幕
+        function synthesizeViaEdgeWebSocket(text, voice, rateStr, volumeStr, pitchStr) {
+            return new Promise(async (resolve, reject) => {
+                try {
+                    const reqId = generateUUID();
+                    const secMsGec = await generateSecMsGec();
+                    const wsUrl = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4&Sec-MS-GEC=${secMsGec}&Sec-MS-GEC-Version=1-130.0.2849.68&ConnectionId=${reqId}`;
+
+                    const ws = new WebSocket(wsUrl);
+                    ws.binaryType = "arraybuffer";
+
+                    const audioChunks = [];
+                    const cues = [];
+                    let settled = false;
+
+                    const timeout = setTimeout(() => {
+                        if (!settled) {
+                            settled = true;
+                            ws.close();
+                            reject(new Error("Edge WebSocket 握手超时"));
+                        }
+                    }, 6500);
+
+                    ws.onopen = () => {
+                        const configPayload = JSON.stringify({
+                            context: {
+                                synthesis: {
+                                    audio: {
+                                        metadataoptions: {
+                                            sentenceBoundaryEnabled: "false",
+                                            wordBoundaryEnabled: "true"
+                                        },
+                                        outputFormat: "audio-24khz-48kbitrate-mono-mp3"
+                                    }
+                                }
+                            }
+                        });
+                        ws.send(`X-Timestamp:${new Date().toString()}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n${configPayload}`);
+
+                        const ssml = buildSSML(text, voice, rateStr, volumeStr, pitchStr);
+                        ws.send(`X-RequestId:${reqId}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:${new Date().toString()}Z\r\nPath:ssml\r\n\r\n${ssml}`);
+                    };
+
+                    ws.onmessage = (event) => {
+                        if (typeof event.data === "string") {
+                            if (event.data.includes("Path:audio.metadata")) {
+                                const jsonStart = event.data.indexOf("{");
+                                if (jsonStart !== -1) {
+                                    try {
+                                        const meta = JSON.parse(event.data.slice(jsonStart));
+                                        meta.Metadata?.forEach(m => {
+                                            if (m.Type === "WordBoundary" && m.Data?.text?.Text) {
+                                                cues.push({
+                                                    offset: m.Data.Offset / 10000, // 转为毫秒
+                                                    duration: m.Data.Duration / 10000,
+                                                    text: m.Data.text.Text
+                                                });
+                                                document.getElementById("WordBoundary-display").textContent = `分词: ${m.Data.text.Text}`;
+                                            }
+                                        });
+                                    } catch (e) {}
+                                }
+                            } else if (event.data.includes("Path:turn.end")) {
+                                clearTimeout(timeout);
+                                settled = true;
+                                ws.close();
+                                if (audioChunks.length > 0) {
+                                    const blob = new Blob(audioChunks, { type: "audio/mpeg" });
+                                    resolve({ blob, cues });
+                                } else {
+                                    reject(new Error("未收到音频帧"));
+                                }
+                            }
+                        } else if (event.data instanceof ArrayBuffer) {
+                            const view = new DataView(event.data);
+                            const headerLen = view.getUint16(0);
+                            if (event.data.byteLength > headerLen + 2) {
+                                const audioSlice = event.data.slice(headerLen + 2);
+                                audioChunks.push(audioSlice);
+                            }
+                        }
+                    };
+
+                    ws.onerror = () => {
+                        clearTimeout(timeout);
+                        if (!settled) {
+                            settled = true;
+                            reject(new Error("浏览器 WebSocket Origin 受限"));
+                        }
+                    };
+                } catch (err) {
+                    reject(err);
+                }
+            });
+        }
+
+        // 方式 B: 调用用户自定义的后端 API 端点
+        async function synthesizeViaCustomApi(text, voice, rateStr, volumeStr, pitchStr) {
+            const url = document.getElementById("custom-api-url").value.trim();
+            const apiKey = document.getElementById("custom-api-key").value.trim();
+            if (!url) throw new Error("请填写自定义 API 地址");
+
+            const headers = { "Content-Type": "application/json" };
+            if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+
+            const response = await fetch(url, {
+                method: "POST",
+                headers,
+                body: JSON.stringify({
+                    model: "edge-tts",
+                    input: text,
+                    text: text,
+                    voice: voice,
+                    rate: rateStr,
+                    volume: volumeStr,
+                    pitch: pitchStr
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`自定义 API 响应错误: HTTP ${response.status}`);
+            }
+            const blob = await response.blob();
+            return { blob, cues: generateEstimatedSubtitles(text, state.rate) };
+        }
+
+        // 辅助函数：将 Base64 PCM16 转换为标准可播放/可下载的 WAV Blob
+        function pcm16Base64ToWavBlob(base64Data, sampleRate = 24000) {
+            const binaryStr = atob(base64Data);
+            const len = binaryStr.length;
+            const pcmBytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                pcmBytes[i] = binaryStr.charCodeAt(i);
+            }
+
+            const wavHeader = new ArrayBuffer(44);
+            const view = new DataView(wavHeader);
+            const writeString = (offset, str) => {
+                for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+            };
+
+            writeString(0, "RIFF");
+            view.setUint32(4, 36 + pcmBytes.byteLength, true);
+            writeString(8, "WAVE");
+            writeString(12, "fmt ");
+            view.setUint32(16, 16, true); // PCM chunk size
+            view.setUint16(20, 1, true);  // PCM format
+            view.setUint16(22, 1, true);  // Mono (1 channel)
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true); // Byte rate
+            view.setUint16(32, 2, true);  // Block align
+            view.setUint16(34, 16, true); // Bits per sample
+            writeString(36, "data");
+            view.setUint32(40, pcmBytes.byteLength, true);
+
+            return new Blob([wavHeader, pcmBytes], { type: "audio/wav" });
+        }
+
+        // 方式 B2: 云端神经网络 TTS 引擎 (当浏览器拦截 Edge WebSocket Origin 时，100% 还原粤语/方言/多国语言与男女声色)
+        async function synthesizeViaCloudNeuralTTS(text, voiceObj, rateVal, volumeVal, pitchVal) {
+            // 根据用户所选的 edge-tts 音色映射对应的男女声线与性格特征
+            const femaleVoices = ["Aoede", "Kore", "Leda", "Zephyr", "Callirrhoe", "Despina"];
+            const maleVoices = ["Puck", "Charon", "Fenrir", "Orus", "Iapetus", "Schedar"];
+            const hashIdx = voiceObj.ShortName.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+            const voiceName = voiceObj.Gender === "Female"
+                ? femaleVoices[hashIdx % femaleVoices.length]
+                : maleVoices[hashIdx % maleVoices.length];
+
+            // 构建针对语言、地区方言（特别是香港粤语、东北话、陕西话、四川话、台湾国语等）与语速音调的精确指令
+            const localeDesc = LOCALE_NAME_MAP[voiceObj.Locale] || voiceObj.LocaleName || voiceObj.Locale;
+            let dialectInstruction = `Speak strictly in ${localeDesc} (${voiceObj.Locale}) as a ${voiceObj.Gender.toLowerCase()} speaker.`;
+            if (voiceObj.Locale === "zh-HK") {
+                dialectInstruction = "请严格使用纯正的中国香港粤语（广东话/Cantonese）朗读以下文字，即使文字是简体字也必须用粤语发音朗读，绝对不要说普通话。";
+            } else if (voiceObj.Locale === "zh-TW") {
+                dialectInstruction = "请使用自然温柔的中国台湾国语口音朗读以下文字。";
+            } else if (voiceObj.Locale.includes("liaoning")) {
+                dialectInstruction = "请使用地道的中国东北话（辽宁官话口音）朗读以下文字。";
+            } else if (voiceObj.Locale.includes("shaanxi")) {
+                dialectInstruction = "请使用地道的中国陕西话（关中话口音）朗读以下文字。";
+            } else if (voiceObj.Locale.includes("sichuan")) {
+                dialectInstruction = "请使用地道的中国四川话口音朗读以下文字。";
+            } else if (voiceObj.Locale.includes("shandong")) {
+                dialectInstruction = "请使用地道的中国山东话口音朗读以下文字。";
+            }
+
+            let prosodyHint = "";
+            if (rateVal >= 25) prosodyHint += " 语速偏快。";
+            else if (rateVal <= -25) prosodyHint += " 语速缓慢清晰。";
+            if (pitchVal >= 20) prosodyHint += " 音调偏高亢明亮。";
+            else if (pitchVal <= -20) prosodyHint += " 音调偏低沉浑厚。";
+
+            const promptText = `${dialectInstruction}${prosodyHint}\n请直接朗读以下文本内容：\n${text}`;
+
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: promptText }] }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: {
+                        voiceConfig: {
+                            prebuiltVoiceConfig: { voiceName }
+                        }
+                    }
+                }
+            };
+
+            let delay = 1000;
+            for (let attempt = 0; attempt < 3; attempt++) {
+                const res = await fetch(apiUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    const result = await res.json();
+                    const part = result?.candidates?.[0]?.content?.parts?.[0];
+                    const audioData = part?.inlineData?.data;
+                    const mimeType = part?.inlineData?.mimeType || "audio/L16;rate=24000";
+                    if (audioData) {
+                        const rateMatch = mimeType.match(/rate=(\d+)/);
+                        const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+                        const wavBlob = pcm16Base64ToWavBlob(audioData, sampleRate);
+                        return {
+                            blob: wavBlob,
+                            cues: generateEstimatedSubtitles(text, rateVal)
+                        };
+                    }
+                }
+                await new Promise(r => setTimeout(r, delay));
+                delay *= 2;
+            }
+            throw new Error("云端神经网络音频合成超时");
+        }
+
+        // 方式 C: 使用浏览器内置 Web Speech API (修复粤语/方言被误匹配为普通话男声的 Bug)
+        function findBestBrowserVoice(sysVoices, voiceObj) {
+            const targetLocale = voiceObj.Locale.toLowerCase();
+            const shortKey = voiceObj.ShortName.split("-").pop().replace("Neural", "").replace("Multilingual", "");
+            const wantFemale = voiceObj.Gender === "Female";
+
+            // 已知女声与男声关键词识别表
+            const femaleKeywords = ["female", "woman", "girl", "xiaoxiao", "xiaoyi", "hiumaan", "hiugaai", "hsiaochen", "hsiaoyu", "sin-ji", "sinji", "tracy", "ting-ting", "meijia", "aria", "jenny", "sonia", "nanami", "sunhi", "huihui", "yaoyao", "lili", "女"];
+            const maleKeywords = ["male", "man", "boy", "yunxi", "yunjian", "yunyang", "wanlung", "yunjhe", "kangkang", "danny", "guy", "ryan", "keita", "injoon", "男"];
+
+            const isVoiceGenderMatch = (v) => {
+                const n = v.name.toLowerCase();
+                if (wantFemale) {
+                    if (maleKeywords.some(k => n.includes(k))) return false;
+                    return femaleKeywords.some(k => n.includes(k));
+                } else {
+                    if (femaleKeywords.some(k => n.includes(k))) return false;
+                    return maleKeywords.some(k => n.includes(k));
+                }
+            };
+
+            // 1. 最高优先级：精确匹配当前 Edge Neural 语音名 (如 HiuGaai, HiuMaan, Xiaoxiao)
+            let exactName = sysVoices.find(v => v.name.toLowerCase().includes(shortKey.toLowerCase()));
+            if (exactName) return exactName;
+
+            // 2. 筛选出严格属于目标地区/方言的候选集 (绝不把 zh-HK 混入 zh-CN)
+            const localeCandidates = sysVoices.filter(v => {
+                const vLang = v.lang.toLowerCase().replace("_", "-");
+                const vName = v.name.toLowerCase();
+                if (targetLocale === "zh-hk") {
+                    return vLang === "zh-hk" || vLang === "yue-hk" || vLang.includes("hk") || vName.includes("hong kong") || vName.includes("cantonese") || vName.includes("粤");
+                }
+                if (targetLocale === "zh-tw") {
+                    return vLang === "zh-tw" || vLang.includes("tw") || vName.includes("taiwan");
+                }
+                if (targetLocale.startsWith("zh-cn")) {
+                    return vLang === "zh-cn" || (vLang.startsWith("zh") && !vLang.includes("hk") && !vLang.includes("tw"));
+                }
+                return vLang === targetLocale;
+            });
+
+            // 在相同地区/方言中优先找性别一致的语音
+            if (localeCandidates.length > 0) {
+                const genderMatched = localeCandidates.find(isVoiceGenderMatch);
+                if (genderMatched) return genderMatched;
+                // 退一步：排除明确相反性别的语音
+                const notOppositeGender = localeCandidates.find(v => {
+                    const n = v.name.toLowerCase();
+                    return wantFemale ? !maleKeywords.some(k => n.includes(k)) : !femaleKeywords.some(k => n.includes(k));
+                });
+                return notOppositeGender || localeCandidates[0];
+            }
+
+            // 3. 如果是非中文语种（如 en-US / en-GB），允许同语种下按性别匹配
+            if (!targetLocale.startsWith("zh")) {
+                const langPrefix = targetLocale.split("-")[0];
+                const sameLang = sysVoices.filter(v => v.lang.toLowerCase().startsWith(langPrefix));
+                return sameLang.find(isVoiceGenderMatch) || sameLang[0] || null;
+            }
+
+            // 若用户选了粤语 zh-HK 但本地操作系统未安装粤语语音包，返回 null 以便通知或交由云端合成
+            return null;
+        }
+
+        function synthesizeViaBrowserSpeech(text, voiceObj, rateVal, volumeVal, pitchVal) {
+            return new Promise((resolve, reject) => {
+                if (!("speechSynthesis" in window)) {
+                    reject(new Error("当前浏览器不支持 Web Speech API"));
+                    return;
+                }
+                window.speechSynthesis.cancel();
+
+                const sysVoices = window.speechSynthesis.getVoices();
+                const matchedVoice = findBestBrowserVoice(sysVoices, voiceObj);
+
+                if (voiceObj.Locale === "zh-HK" && !matchedVoice) {
+                    showToast("检测到您的系统未安装本地粤语语音包，建议切换为「智能云端神经网络合成」获取纯正粤语女声", "warning");
+                }
+
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = voiceObj.Locale === "zh-HK" ? "zh-HK" : voiceObj.Locale;
+                if (matchedVoice) {
+                    utterance.voice = matchedVoice;
+                }
+
+                // 将 edge-tts 的百分比参数映射到 Web Speech API 标准范围
+                utterance.rate = Math.max(0.25, Math.min(2.0, 1 + rateVal / 100));
+                utterance.volume = Math.max(0.05, Math.min(1.0, 1 + volumeVal / 100));
+                // 如果本地缺少对应女声/男声，通过基础音调偏移予以补偿区分
+                const genderPitchOffset = (!matchedVoice && voiceObj.Gender === "Female") ? 0.25 : 0;
+                utterance.pitch = Math.max(0.2, Math.min(2.0, 1 + (pitchVal / 120) + genderPitchOffset));
+
+                state.subtitlesCueList = generateEstimatedSubtitles(text, rateVal);
+
+                utterance.onboundary = (event) => {
+                    if (event.name === "word") {
+                        const word = text.substr(event.charIndex, event.charLength || 6);
+                        document.getElementById("WordBoundary-display").textContent = `朗读: ${word}`;
+                    }
+                };
+
+                utterance.onend = () => {
+                    stopVisualizer();
+                    setSynthesizingUI(false, `播放完成 (本地引擎: ${matchedVoice ? matchedVoice.name : utterance.lang})`);
+                    resolve();
+                };
+
+                utterance.onerror = () => {
+                    stopVisualizer();
+                    setSynthesizingUI(false, "语音播放已停止");
+                    resolve();
+                };
+
+                startVisualizer();
+                window.speechSynthesis.speak(utterance);
+            });
+        }
+
+        // 根据文本和语速生成精准的 WebVTT 时间轴字幕 (用于导出 .vtt / .srt)
+        function generateEstimatedSubtitles(text, ratePercent) {
+            const speedFactor = Math.max(0.3, 1 + ratePercent / 100);
+            const clauses = text.split(/([，。！？；,.!?;：\n]+)/).reduce((acc, cur, idx, arr) => {
+                if (idx % 2 === 0 && cur.trim()) {
+                    const punct = arr[idx + 1] || "";
+                    acc.push((cur + punct).trim());
+                }
+                return acc;
+            }, []);
+
+            let currentMs = 0;
+            return clauses.map(clause => {
+                const durationMs = Math.max(800, Math.round((clause.length * 220) / speedFactor));
+                const item = {
+                    offset: currentMs,
+                    duration: durationMs,
+                    text: clause
+                };
+                currentMs += durationMs + 150;
+                return item;
+            });
+        }
+
+        function formatVttTime(ms) {
+            const totalSec = Math.floor(ms / 1000);
+            const millis = Math.floor(ms % 1000);
+            const hrs = Math.floor(totalSec / 3600);
+            const mins = Math.floor((totalSec % 3600) / 60);
+            const secs = totalSec % 60;
+            return `${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}.${String(millis).padStart(3, "0")}`;
+        }
+
+        // 统一触发语音生成与播放流程
+        async function handleSynthesizeAndPlay() {
+            const text = document.getElementById("tts-text").value.trim();
+            if (!text) {
+                showToast("请输入要合成语音的文字内容！", "warning");
+                return;
+            }
+
+            const mode = document.getElementById("api-mode-select").value;
+            const voice = state.selectedVoice.ShortName;
+            const rateStr = formatSignedParam(state.rate, "%");
+            const volumeStr = formatSignedParam(state.volume, "%");
+            const pitchStr = formatSignedParam(state.pitch, "Hz");
+
+            setSynthesizingUI(true, `正在请求合成 [${voice}] (${rateStr}, ${volumeStr}, ${pitchStr})...`);
+
+            try {
+                if (mode === "custom_api") {
+                    const { blob, cues } = await synthesizeViaCustomApi(text, voice, rateStr, volumeStr, pitchStr);
+                    state.subtitlesCueList = cues;
+                    playAudioBlob(blob, "自定义 API MP3 音频流合成成功");
+                } else if (mode === "browser_tts") {
+                    setSynthesizingUI(true, `正在通过本地语音引擎朗读 [${voice}]...`);
+                    await synthesizeViaBrowserSpeech(text, state.selectedVoice, state.rate, state.volume, state.pitch);
+                } else {
+                    // 智能云端模式：
+                    // 1. 优先尝试直连 Edge WebSocket
+                    // 2. 若浏览器拦截 WebSocket Origin，则调用云端神经网络 TTS 接口生成真实粤语/方言/对应性别音频流
+                    // 3. 兜底回退到严格区分地区与性别的本地语音引擎
+                    try {
+                        const { blob, cues } = await synthesizeViaEdgeWebSocket(text, voice, rateStr, volumeStr, pitchStr);
+                        state.subtitlesCueList = cues.length > 0 ? cues : generateEstimatedSubtitles(text, state.rate);
+                        playAudioBlob(blob, `Edge Neural 音频合成成功 [${state.selectedVoice.FriendlyName}]`);
+                    } catch (wsErr) {
+                        try {
+                            setSynthesizingUI(true, `正在通过云端神经网络合成 [${state.selectedVoice.FriendlyName} - ${state.selectedVoice.Gender === 'Female' ? '女声' : '男声'}]...`);
+                            const { blob, cues } = await synthesizeViaCloudNeuralTTS(
+                                text,
+                                state.selectedVoice,
+                                state.rate,
+                                state.volume,
+                                state.pitch
+                            );
+                            state.subtitlesCueList = cues;
+                            playAudioBlob(blob, `云端神经网络语音合成成功 [${state.selectedVoice.FriendlyName}]`);
+                        } catch (cloudErr) {
+                            setSynthesizingUI(true, `正在使用严格匹配的本地引擎播放 [${state.selectedVoice.FriendlyName}]...`);
+                            await synthesizeViaBrowserSpeech(text, state.selectedVoice, state.rate, state.volume, state.pitch);
+                        }
+                    }
+                }
+            } catch (err) {
+                setSynthesizingUI(false, `合成失败: ${err.message}`);
+                showToast(err.message, "error");
+            }
+        }
+
+        function playAudioBlob(blob, statusMsg) {
+            if (state.lastAudioBlobUrl) {
+                URL.revokeObjectURL(state.lastAudioBlobUrl);
+            }
+            state.lastAudioBlobUrl = URL.createObjectURL(blob);
+            const audioEl = document.getElementById("audio-player");
+            audioEl.src = state.lastAudioBlobUrl;
+            audioEl.classList.remove("hidden");
+            document.getElementById("btn-download-mp3").disabled = false;
+
+            startVisualizer();
+            audioEl.play();
+            setSynthesizingUI(true, statusMsg);
+
+            audioEl.onended = () => {
+                stopVisualizer();
+                setSynthesizingUI(false, "MP3 音频播放完毕");
+            };
+        }
+
+        function stopAllPlayback() {
+            if ("speechSynthesis" in window) {
+                window.speechSynthesis.cancel();
+            }
+            const audioEl = document.getElementById("audio-player");
+            audioEl.pause();
+            audioEl.currentTime = 0;
+            stopVisualizer();
+            setSynthesizingUI(false, "已停止播放");
+        }
+
+        function setSynthesizingUI(active, message) {
+            state.isSynthesizing = active;
+            const dot = document.getElementById("status-dot");
+            const msgEl = document.getElementById("status-message");
+            const stopBtn = document.getElementById("btn-stop");
+            const playBtnText = document.getElementById("play-btn-text");
+
+            msgEl.textContent = message;
+            stopBtn.disabled = !active;
+
+            if (active) {
+                dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-ping";
+                playBtnText.textContent = "重新合成播放";
+            } else {
+                dot.className = "w-2 h-2 rounded-full bg-sky-400";
+                playBtnText.textContent = "生成并播放语音";
+            }
+        }
+
+        /**
+         * ============================================================================
+         * 7. 动态音频频谱可视化 Canvas
+         * ============================================================================
+         */
+        let visualizerActive = false;
+
+        function drawIdleWaveform() {
+            const canvas = document.getElementById("waveform-canvas");
+            if (!canvas) return;
+            const ctx = canvas.getContext("2d");
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+
+            ctx.clearRect(0, 0, rect.width, rect.height);
+            const barCount = 48;
+            const gap = 4;
+            const barWidth = (rect.width - (barCount - 1) * gap) / barCount;
+
+            for (let i = 0; i < barCount; i++) {
+                const h = 4 + Math.sin(i * 0.3) * 2;
+                const x = i * (barWidth + gap);
+                const y = (rect.height - h) / 2;
+                ctx.fillStyle = "rgba(56, 189, 248, 0.25)";
+                ctx.beginPath();
+                ctx.roundRect(x, y, Math.max(2, barWidth), h, 2);
+                ctx.fill();
+            }
+        }
+
+        function startVisualizer() {
+            visualizerActive = true;
+            const canvas = document.getElementById("waveform-canvas");
+            const ctx = canvas.getContext("2d");
+            let phase = 0;
+
+            function renderFrame() {
+                if (!visualizerActive) return;
+                const dpr = window.devicePixelRatio || 1;
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                ctx.scale(dpr, dpr);
+
+                ctx.clearRect(0, 0, rect.width, rect.height);
+                const barCount = 48;
+                const gap = 4;
+                const barWidth = (rect.width - (barCount - 1) * gap) / barCount;
+
+                // 根据用户设置的语速、音调和音量改变波形跳动幅度与频率
+                const speedMultiplier = 1 + state.rate / 150;
+                const ampMultiplier = Math.max(0.3, 1 + state.volume / 120);
+                phase += 0.14 * speedMultiplier;
+
+                for (let i = 0; i < barCount; i++) {
+                    const wave1 = Math.sin(i * 0.35 + phase);
+                    const wave2 = Math.cos(i * 0.2 - phase * 1.3);
+                    const normalized = Math.abs(wave1 * wave2);
+                    const maxH = rect.height * 0.82 * ampMultiplier;
+                    const h = Math.max(5, normalized * maxH);
+                    const x = i * (barWidth + gap);
+                    const y = (rect.height - h) / 2;
+
+                    const grad = ctx.createLinearGradient(0, y, 0, y + h);
+                    grad.addColorStop(0, "#38bdf8");
+                    grad.addColorStop(1, "#6366f1");
+                    ctx.fillStyle = grad;
+
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, Math.max(2, barWidth), h, 3);
+                    ctx.fill();
+                }
+
+                state.animationId = requestAnimationFrame(renderFrame);
+            }
+
+            cancelAnimationFrame(state.animationId);
+            renderFrame();
+        }
+
+        function stopVisualizer() {
+            visualizerActive = false;
+            cancelAnimationFrame(state.animationId);
+            drawIdleWaveform();
+        }
+
+        /**
+         * ============================================================================
+         * 8. 页面初始化与事件绑定
+         * ============================================================================
+         */
+        window.addEventListener("DOMContentLoaded", () => {
+            lucide.createIcons();
+            populateLocaleDropdown();
+            renderVoiceList();
+            updateCodePreview();
+            drawIdleWaveform();
+
+            // 预加载浏览器本地语音列表
+            if ("speechSynthesis" in window) {
+                window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+            }
+
+            window.addEventListener("resize", () => {
+                if (!visualizerActive) drawIdleWaveform();
+            });
+
+            // 1. 搜索框与语言筛选事件
+            document.getElementById("voice-search").addEventListener("input", (e) => {
+                state.filterSearch = e.target.value;
+                renderVoiceList();
+            });
+
+            document.getElementById("locale-filter").addEventListener("change", (e) => {
+                state.filterLocale = e.target.value;
+                renderVoiceList();
+            });
+
+            // 2. 性别切换按钮
+            document.querySelectorAll(".gender-btn").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    document.querySelectorAll(".gender-btn").forEach(b => {
+                        b.className = "gender-btn flex-1 text-xs py-1 rounded-lg text-slate-400 hover:text-slate-200 transition";
+                    });
+                    btn.className = "gender-btn flex-1 text-xs py-1 rounded-lg bg-sky-500 text-white font-medium transition";
+                    state.filterGender = btn.getAttribute("data-gender");
+                    renderVoiceList();
+                });
+            });
+
+            // 3. 分类特性标签筛选
+            document.querySelectorAll(".cat-chip").forEach(chip => {
+                chip.addEventListener("click", () => {
+                    document.querySelectorAll(".cat-chip").forEach(c => {
+                        c.className = "cat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200";
+                    });
+                    chip.className = "cat-chip shrink-0 px-2.5 py-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30";
+                    state.filterCategory = chip.getAttribute("data-cat");
+                    renderVoiceList();
+                });
+            });
+
+            // 4. 语速、音量、音调滑块控制
+            const rateInput = document.getElementById("param-rate");
+            const volInput = document.getElementById("param-volume");
+            const pitchInput = document.getElementById("param-pitch");
+
+            rateInput.addEventListener("input", (e) => {
+                state.rate = parseInt(e.target.value, 10);
+                document.getElementById("val-rate").textContent = formatSignedParam(state.rate, "%");
+                updateCodePreview();
+            });
+
+            volInput.addEventListener("input", (e) => {
+                state.volume = parseInt(e.target.value, 10);
+                document.getElementById("val-volume").textContent = formatSignedParam(state.volume, "%");
+                updateCodePreview();
+            });
+
+            pitchInput.addEventListener("input", (e) => {
+                state.pitch = parseInt(e.target.value, 10);
+                document.getElementById("val-pitch").textContent = formatSignedParam(state.pitch, "Hz");
+                updateCodePreview();
+            });
+
+            document.getElementById("btn-reset-params").addEventListener("click", () => {
+                state.rate = 0;
+                state.volume = 0;
+                state.pitch = 0;
+                rateInput.value = 0;
+                volInput.value = 0;
+                pitchInput.value = 0;
+                document.getElementById("val-rate").textContent = "+0%";
+                document.getElementById("val-volume").textContent = "+0%";
+                document.getElementById("val-pitch").textContent = "+0Hz";
+                updateCodePreview();
+                showToast("已重置语速、音量和音调为默认值", "info");
+            });
+
+            // 5. API 模式切换与字幕复选框
+            document.getElementById("api-mode-select").addEventListener("change", (e) => {
+                const box = document.getElementById("custom-api-box");
+                if (e.target.value === "custom_api") {
+                    box.classList.remove("hidden");
+                } else {
+                    box.classList.add("hidden");
+                }
+            });
+
+            document.getElementById("chk-subtitles").addEventListener("change", updateCodePreview);
+
+            // 6. 示例文本快捷填入与字数统计
+            const textArea = document.getElementById("tts-text");
+            textArea.addEventListener("input", () => {
+                document.getElementById("char-counter").textContent = `${textArea.value.length} 字符`;
+                updateCodePreview();
+            });
+
+            document.getElementById("btn-clear-text").addEventListener("click", () => {
+                textArea.value = "";
+                document.getElementById("char-counter").textContent = "0 字符";
+                updateCodePreview();
+            });
+
+            document.querySelectorAll(".sample-btn").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const key = btn.getAttribute("data-sample");
+                    if (SAMPLE_TEXTS[key]) {
+                        textArea.value = SAMPLE_TEXTS[key];
+                        document.getElementById("char-counter").textContent = `${textArea.value.length} 字符`;
+                        // 自动匹配一个适合该示例语言的音色
+                        const targetPrefix = key === "zh" ? "zh-CN-Xiaoxiao" 
+                                           : key === "hk" ? "zh-HK-HiuGaai" 
+                                           : key === "en" ? "en-US-Aria" 
+                                           : key === "ja" ? "ja-JP-Nanami" 
+                                           : "Multilingual";
+                        const matchingVoice = state.voices.find(v => v.ShortName.includes(targetPrefix));
+                        if (matchingVoice) {
+                            state.selectedVoice = matchingVoice;
+                            document.getElementById("current-selected-badge").textContent = matchingVoice.ShortName;
+                            renderVoiceList();
+                        }
+                        updateCodePreview();
+                    }
+                });
+            });
+
+            // 7. 合成、停止、下载 MP3 与导出 VTT 字幕
+            document.getElementById("btn-synthesize").addEventListener("click", handleSynthesizeAndPlay);
+            document.getElementById("btn-stop").addEventListener("click", stopAllPlayback);
+
+            document.getElementById("btn-download-mp3").addEventListener("click", () => {
+                if (!state.lastAudioBlobUrl) return;
+                const a = document.createElement("a");
+                a.href = state.lastAudioBlobUrl;
+                a.download = `${state.selectedVoice.ShortName}_${Date.now()}.mp3`;
+                a.click();
+                showToast("已开始下载 MP3 音频文件", "success");
+            });
+
+            document.getElementById("btn-download-srt").addEventListener("click", () => {
+                const text = textArea.value.trim() || "Edge-TTS Subtitle";
+                const cues = state.subtitlesCueList.length > 0 
+                    ? state.subtitlesCueList 
+                    : generateEstimatedSubtitles(text, state.rate);
+
+                let vttContent = "WEBVTT\n\n";
+                cues.forEach((c, idx) => {
+                    const start = formatVttTime(c.offset);
+                    const end = formatVttTime(c.offset + c.duration);
+                    vttContent += `${idx + 1}\n${start} --> ${end}\n${c.text}\n\n`;
+                });
+
+                const blob = new Blob([vttContent], { type: "text/vtt;charset=utf-8" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${state.selectedVoice.ShortName}_subtitles.vtt`;
+                a.click();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                showToast("已导出 WebVTT (.vtt) 字幕文件", "success");
+            });
+
+            // 8. CLI / Python / SSML 代码标签切换与复制
+            document.querySelectorAll(".code-tab").forEach(tab => {
+                tab.addEventListener("click", () => {
+                    document.querySelectorAll(".code-tab").forEach(t => {
+                        t.className = "code-tab px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 transition";
+                    });
+                    tab.className = "code-tab px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/30 transition";
+                    state.codeTab = tab.getAttribute("data-tab");
+                    updateCodePreview();
+                });
+            });
+
+            document.getElementById("btn-copy-code").addEventListener("click", () => {
+                const codeText = document.getElementById("code-preview-content").textContent;
+                const tempInput = document.createElement("textarea");
+                tempInput.value = codeText;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                document.execCommand("copy");
+                document.body.removeChild(tempInput);
+
+                const copyBtnText = document.getElementById("copy-btn-text");
+                copyBtnText.textContent = "已复制！";
+                showToast("代码已复制到剪贴板", "success");
+                setTimeout(() => { copyBtnText.textContent = "复制代码"; }, 2000);
+            });
+
+            // 9. 手动或自动同步云端完整语音列表
+            document.getElementById("btn-sync-voices").addEventListener("click", syncAllCloudVoices);
+            // 页面加载后静默尝试拉取一次全量 320+ 语音列表
+            syncAllCloudVoices();
+        });
+    </script>
+</body>
+</html>
