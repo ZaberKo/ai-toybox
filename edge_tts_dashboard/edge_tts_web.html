@@ -94,13 +94,13 @@
                         <h1 class="text-lg font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-sky-400 bg-clip-text text-transparent">
                             edge-tts Studio
                         </h1>
-                        <span class="text-xs px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 font-mono">v6.1+</span>
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 font-mono">v7.2+</span>
                     </div>
                     <p class="text-xs text-slate-400">基于 rany2/edge-tts 的参数调试、多语言检索与实时语音合成工作台</p>
                 </div>
             </div>
 
-            <!-- 状态统计与外链 -->
+            <!-- Voice statistics -->
             <div class="flex items-center gap-3">
                 <div class="hidden sm:flex items-center gap-4 bg-slate-900/90 border border-slate-800 px-3.5 py-1.5 rounded-xl text-xs">
                     <div class="flex items-center gap-1.5">
@@ -116,11 +116,6 @@
                     </div>
                 </div>
 
-                <a href="https://github.com/rany2/edge-tts" target="_blank" rel="noopener noreferrer" 
-                   class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition border border-slate-700">
-                    <i data-lucide="github" class="w-4 h-4"></i>
-                    <span>rany2/edge-tts</span>
-                </a>
             </div>
         </div>
     </header>
@@ -260,22 +255,18 @@
                     </div>
                 </div>
 
-                <!-- 附加控制项：输出格式、字幕选项与 API 调用模式 -->
+                <!-- Default engine and subtitle settings -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                    <!-- 合成引擎模式选择 -->
+                    <!-- Default synthesis engine -->
                     <div class="bg-slate-900/50 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between">
                         <div class="flex items-center justify-between mb-1.5">
                             <span class="text-xs font-medium text-slate-300 flex items-center gap-1.5">
                                 <i data-lucide="cpu" class="w-3.5 h-3.5 text-amber-400"></i>
-                                <span>音频生成 API 引擎模式</span>
+                                <span>默认语音合成引擎</span>
                             </span>
-                            <span class="text-[11px] text-emerald-400 font-mono" id="engine-status-tag">严格方言与性别匹配</span>
+                            <span class="text-[11px] text-emerald-400 font-mono" id="engine-status-tag">Edge TTS</span>
                         </div>
-                        <select id="api-mode-select" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500">
-                            <option value="auto">⚡ 智能云端神经网络合成 (精准还原粤语/方言/男女声)</option>
-                            <option value="custom_api">🔌 自定义后端 API (兼容 edge-tts / OpenAI TTS 接口)</option>
-                            <option value="browser_tts">🔊 浏览器本地语音引擎 (严格地区与性别匹配)</option>
-                        </select>
+                        <p class="text-xs text-slate-300">优先使用 Edge TTS；浏览器限制连接时尝试本地语音，无需 API Key。</p>
                     </div>
 
                     <!-- 字幕与输出文件配置 (对应 edge-tts --write-media / --write-subtitles) -->
@@ -290,32 +281,12 @@
                         <div class="flex items-center gap-4 pt-1">
                             <label class="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer">
                                 <input type="checkbox" id="chk-subtitles" checked class="rounded bg-slate-950 border-slate-700 text-sky-500 focus:ring-0">
-                                <span>同步生成 WebVTT/SRT 字幕时间戳</span>
+                                <span>代码示例同时导出 SRT 字幕</span>
                             </label>
                         </div>
                     </div>
                 </div>
 
-                <!-- 自定义后端 API 配置折叠栏 (当选择 custom_api 时显示) -->
-                <div id="custom-api-box" class="hidden bg-slate-950/90 border border-amber-500/30 rounded-xl p-3.5 space-y-2">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold text-amber-400 flex items-center gap-1.5">
-                            <i data-lucide="server" class="w-3.5 h-3.5"></i>
-                            <span>自定义 Edge-TTS 服务端接口地址</span>
-                        </span>
-                        <span class="text-[11px] text-slate-400">支持 POST JSON 或 GET 查询参数</span>
-                    </div>
-                    <div class="flex flex-col sm:flex-row gap-2">
-                        <input type="text" id="custom-api-url" value="http://127.0.0.1:8000/v1/audio/speech" 
-                               placeholder="例如: http://localhost:8000/tts 或 OpenAI 兼容端点" 
-                               class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-200 focus:outline-none focus:border-amber-400">
-                        <input type="password" id="custom-api-key" placeholder="Bearer API Key (可选)" 
-                               class="sm:w-44 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-200 focus:outline-none focus:border-amber-400">
-                    </div>
-                    <p class="text-[11px] text-slate-400">
-                        提示：请求将发送包含 <code class="text-sky-400">text/input</code>, <code class="text-sky-400">voice</code>, <code class="text-sky-400">rate</code>, <code class="text-sky-400">volume</code>, <code class="text-sky-400">pitch</code> 的 JSON 体并接收音频流。
-                    </p>
-                </div>
             </div>
 
             <!-- 2. 文本输入与语音合成播放器区域 -->
@@ -374,7 +345,7 @@
                         <button id="btn-download-srt"
                                 class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-xs font-medium text-emerald-300 border border-slate-700 transition">
                             <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
-                            <span>导出 VTT/SRT 字幕</span>
+                            <span>导出 WebVTT 字幕</span>
                         </button>
                     </div>
                 </div>
@@ -596,6 +567,7 @@
         const state = {
             voices: [...BUILTIN_VOICES],
             selectedVoice: BUILTIN_VOICES[0],
+            selectedSample: "zh",
             filterSearch: "",
             filterLocale: "ALL",
             filterGender: "ALL",
@@ -606,9 +578,47 @@
             codeTab: "cli",
             isSynthesizing: false,
             lastAudioBlobUrl: null,
+            lastSynthesis: null,
+            synthesisController: null,
+            currentUtterance: null,
             subtitlesCueList: [],
             animationId: null
         };
+
+        function setSampleText(key) {
+            if (!SAMPLE_TEXTS[key]) return;
+            const textArea = document.getElementById("tts-text");
+            textArea.value = SAMPLE_TEXTS[key];
+            state.selectedSample = key;
+            document.getElementById("char-counter").textContent = `${textArea.value.length} characters`;
+            renderSampleSelection();
+        }
+
+        function renderSampleSelection() {
+            document.querySelectorAll(".sample-btn").forEach(button => {
+                const selected = button.getAttribute("data-sample") === state.selectedSample;
+                button.setAttribute("aria-pressed", String(selected));
+                button.className = selected
+                    ? "sample-btn text-xs px-2.5 py-1 rounded-lg bg-sky-500/20 text-sky-300 border border-sky-500/30 transition"
+                    : "sample-btn text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition";
+            });
+        }
+
+        function selectVoice(voice, syncSample = true) {
+            state.selectedVoice = voice;
+            document.getElementById("current-selected-badge").textContent = voice.ShortName;
+            if (syncSample) {
+                const sampleKey = voice.ShortName.includes("Multilingual") ? "multi"
+                    : voice.Locale === "zh-CN" ? "zh"
+                    : voice.Locale === "zh-HK" ? "hk"
+                    : voice.Locale.startsWith("en-") ? "en"
+                    : voice.Locale.startsWith("ja-") ? "ja"
+                    : null;
+                if (sampleKey) setSampleText(sampleKey);
+            }
+            renderVoiceList();
+            updateCodePreview();
+        }
 
         /**
          * ============================================================================
@@ -625,7 +635,7 @@
                 error: "border-rose-500/40 bg-slate-900/95 text-rose-300"
             };
             toast.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-xl backdrop-blur-md text-xs font-medium flex items-center gap-2 transition-all duration-300 ${colors[type] || colors.info}`;
-            toast.innerHTML = `<span>${message}</span>`;
+            toast.textContent = message;
             container.appendChild(toast);
             setTimeout(() => {
                 toast.style.opacity = "0";
@@ -756,10 +766,7 @@
                     const shortName = card.getAttribute("data-voice");
                     const found = state.voices.find(item => item.ShortName === shortName);
                     if (found) {
-                        state.selectedVoice = found;
-                        document.getElementById("current-selected-badge").textContent = found.ShortName;
-                        renderVoiceList();
-                        updateCodePreview();
+                        selectVoice(found);
                     }
                 });
             });
@@ -789,22 +796,23 @@
             const rateStr = formatSignedParam(state.rate, "%");
             const volumeStr = formatSignedParam(state.volume, "%");
             const pitchStr = formatSignedParam(state.pitch, "Hz");
-            const rawText = (document.getElementById("tts-text").value || "Hello World").replace(/"/g, '\\"').replace(/\n/g, " ");
+            const rawText = document.getElementById("tts-text").value || "Hello World";
             const includeSubs = document.getElementById("chk-subtitles").checked;
 
             const codeEl = document.getElementById("code-preview-content");
 
             if (state.codeTab === "cli") {
-                let cmd = `edge-tts \\\n  --voice "${voice}" \\\n  --text "${rawText}"`;
+                const shellText = quoteShellArgument(rawText);
+                let cmd = `# POSIX shell (bash/zsh)\nedge-tts \\\n  --voice ${quoteShellArgument(voice)} \\\n  --text ${shellText}`;
                 if (state.rate !== 0) cmd += ` \\\n  --rate="${rateStr}"`;
                 if (state.volume !== 0) cmd += ` \\\n  --volume="${volumeStr}"`;
                 if (state.pitch !== 0) cmd += ` \\\n  --pitch="${pitchStr}"`;
                 cmd += ` \\\n  --write-media output.mp3`;
-                if (includeSubs) cmd += ` \\\n  --write-subtitles output.vtt`;
-                cmd += `\n\n# 或者直接实时播放 (使用 edge-playback):\nedge-playback --voice "${voice}" --rate="${rateStr}" --volume="${volumeStr}" --pitch="${pitchStr}" --text "${rawText}"`;
+                if (includeSubs) cmd += ` \\\n  --write-subtitles output.srt`;
+                cmd += `\n\n# Play directly with edge-playback (POSIX shell):\nedge-playback --voice ${quoteShellArgument(voice)} --rate="${rateStr}" --volume="${volumeStr}" --pitch="${pitchStr}" --text ${shellText}`;
                 codeEl.textContent = cmd;
             } else if (state.codeTab === "python") {
-                const py = `import asyncio\nimport edge_tts\n\nTEXT = "${rawText}"\nVOICE = "${voice}"\nRATE = "${rateStr}"\nVOLUME = "${volumeStr}"\nPITCH = "${pitchStr}"\nOUTPUT_FILE = "output.mp3"\n${includeSubs ? 'WEBVTT_FILE = "output.vtt"\n' : ''}\nasync def amain() -> None:\n    communicate = edge_tts.Communicate(TEXT, VOICE, rate=RATE, volume=VOLUME, pitch=PITCH)\n${includeSubs ? '    submaker = edge_tts.SubMaker()\n    with open(OUTPUT_FILE, "wb") as file:\n        async for chunk in communicate.stream():\n            if chunk["type"] == "audio":\n                file.write(chunk["data"])\n            elif chunk["type"] == "WordBoundary":\n                submaker.create_sub((chunk["offset"], chunk["duration"]), chunk["text"])\n    with open(WEBVTT_FILE, "w", encoding="utf-8") as file:\n        file.write(submaker.generate_subs())' : '    await communicate.save(OUTPUT_FILE)'}\n\nif __name__ == "__main__":\n    asyncio.run(amain())`;
+                const py = `# Requires edge-tts >= 7.2.0\nimport asyncio\nimport edge_tts\n\nTEXT = ${JSON.stringify(rawText)}\nVOICE = ${JSON.stringify(voice)}\nRATE = "${rateStr}"\nVOLUME = "${volumeStr}"\nPITCH = "${pitchStr}"\nOUTPUT_FILE = "output.mp3"\n${includeSubs ? 'SUBTITLE_FILE = "output.srt"\n' : ''}\nasync def amain() -> None:\n    communicate = edge_tts.Communicate(TEXT, VOICE, rate=RATE, volume=VOLUME, pitch=PITCH, boundary="WordBoundary")\n${includeSubs ? '    submaker = edge_tts.SubMaker()\n    with open(OUTPUT_FILE, "wb") as file:\n        async for chunk in communicate.stream():\n            if chunk["type"] == "audio":\n                file.write(chunk["data"])\n            elif chunk["type"] == "WordBoundary":\n                submaker.feed(chunk)\n    with open(SUBTITLE_FILE, "w", encoding="utf-8") as file:\n        file.write(submaker.get_srt())' : '    await communicate.save(OUTPUT_FILE)'}\n\nif __name__ == "__main__":\n    asyncio.run(amain())`;
                 codeEl.textContent = py;
             } else {
                 codeEl.textContent = buildSSML(
@@ -815,6 +823,10 @@
                     pitchStr
                 );
             }
+        }
+
+        function quoteShellArgument(value) {
+            return "'" + value.replace(/'/g, "'\"'\"'") + "'";
         }
 
         /**
@@ -858,13 +870,13 @@
 
         /**
          * ============================================================================
-         * 6. 音频合成引擎 (支持 Edge WebSocket Sec-MS-GEC 协议 / 自定义后端 API / Web Speech 降级)
+         * 6. Default Edge TTS with local browser speech fallback
          * ============================================================================
          */
         function generateUUID() {
             return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-                (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16).replace(/-/g, "")
-            );
+                (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+            ).replace(/-/g, "");
         }
 
         // 计算 rany2/edge-tts DRM 模块中的 Sec-MS-GEC 安全令牌
@@ -880,360 +892,204 @@
             return hashArray.map(b => b.toString(16).padStart(2, "0")).join("").toUpperCase();
         }
 
-        // 方式 A: 尝试直接通过微软 Edge ReadAloud WebSocket 合成 MP3 二进制流与 WordBoundary 字幕
-        function synthesizeViaEdgeWebSocket(text, voice, rateStr, volumeStr, pitchStr) {
-            return new Promise(async (resolve, reject) => {
-                try {
-                    const reqId = generateUUID();
-                    const secMsGec = await generateSecMsGec();
-                    const wsUrl = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4&Sec-MS-GEC=${secMsGec}&Sec-MS-GEC-Version=1-130.0.2849.68&ConnectionId=${reqId}`;
+        // Separate connection timeout from receive-idle timeout and release every resource on cancellation.
+        async function synthesizeViaEdgeWebSocket(text, voice, rateStr, volumeStr, pitchStr, signal) {
+            signal?.throwIfAborted();
+            const reqId = generateUUID();
+            const secMsGec = await generateSecMsGec();
+            signal?.throwIfAborted();
+            const wsUrl = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4&Sec-MS-GEC=${secMsGec}&Sec-MS-GEC-Version=1-130.0.2849.68&ConnectionId=${reqId}`;
 
-                    const ws = new WebSocket(wsUrl);
-                    ws.binaryType = "arraybuffer";
+            return new Promise((resolve, reject) => {
+                const ws = new WebSocket(wsUrl);
+                ws.binaryType = "arraybuffer";
+                const audioChunks = [];
+                const cues = [];
+                let settled = false;
+                let timeout;
 
-                    const audioChunks = [];
-                    const cues = [];
-                    let settled = false;
+                function finish(error, result) {
+                    if (settled) return;
+                    settled = true;
+                    clearTimeout(timeout);
+                    signal?.removeEventListener("abort", onAbort);
+                    ws.onopen = ws.onmessage = ws.onerror = ws.onclose = null;
+                    ws.close();
+                    if (error) reject(error);
+                    else resolve(result);
+                }
 
-                    const timeout = setTimeout(() => {
-                        if (!settled) {
-                            settled = true;
-                            ws.close();
-                            reject(new Error("Edge WebSocket 握手超时"));
-                        }
-                    }, 6500);
+                function onAbort() {
+                    finish(new DOMException("Synthesis cancelled", "AbortError"));
+                }
 
-                    ws.onopen = () => {
+                function armTimeout(delay, message) {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => finish(new Error(message)), delay);
+                }
+
+                signal?.addEventListener("abort", onAbort, { once: true });
+                armTimeout(10000, "Edge WebSocket connection timed out");
+
+                ws.onopen = () => {
+                    armTimeout(60000, "Edge WebSocket stopped sending data");
+                    try {
                         const configPayload = JSON.stringify({
                             context: {
                                 synthesis: {
                                     audio: {
-                                        metadataoptions: {
-                                            sentenceBoundaryEnabled: "false",
-                                            wordBoundaryEnabled: "true"
-                                        },
+                                        metadataoptions: { sentenceBoundaryEnabled: "false", wordBoundaryEnabled: "true" },
                                         outputFormat: "audio-24khz-48kbitrate-mono-mp3"
                                     }
                                 }
                             }
                         });
                         ws.send(`X-Timestamp:${new Date().toString()}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n${configPayload}`);
-
                         const ssml = buildSSML(text, voice, rateStr, volumeStr, pitchStr);
                         ws.send(`X-RequestId:${reqId}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:${new Date().toString()}Z\r\nPath:ssml\r\n\r\n${ssml}`);
-                    };
+                    } catch (error) {
+                        finish(error);
+                    }
+                };
 
-                    ws.onmessage = (event) => {
+                ws.onmessage = event => {
+                    if (settled) return;
+                    armTimeout(60000, "Edge WebSocket stopped sending data");
+                    try {
                         if (typeof event.data === "string") {
-                            if (event.data.includes("Path:audio.metadata")) {
-                                const jsonStart = event.data.indexOf("{");
-                                if (jsonStart !== -1) {
-                                    try {
-                                        const meta = JSON.parse(event.data.slice(jsonStart));
-                                        meta.Metadata?.forEach(m => {
-                                            if (m.Type === "WordBoundary" && m.Data?.text?.Text) {
-                                                cues.push({
-                                                    offset: m.Data.Offset / 10000, // 转为毫秒
-                                                    duration: m.Data.Duration / 10000,
-                                                    text: m.Data.text.Text
-                                                });
-                                                document.getElementById("WordBoundary-display").textContent = `分词: ${m.Data.text.Text}`;
-                                            }
-                                        });
-                                    } catch (e) {}
-                                }
-                            } else if (event.data.includes("Path:turn.end")) {
-                                clearTimeout(timeout);
-                                settled = true;
-                                ws.close();
-                                if (audioChunks.length > 0) {
-                                    const blob = new Blob(audioChunks, { type: "audio/mpeg" });
-                                    resolve({ blob, cues });
-                                } else {
-                                    reject(new Error("未收到音频帧"));
-                                }
+                            const separator = event.data.indexOf("\r\n\r\n");
+                            const headers = separator < 0 ? event.data : event.data.slice(0, separator);
+                            if (headers.split("\r\n").includes("Path:audio.metadata")) {
+                                const meta = JSON.parse(event.data.slice(separator + 4));
+                                meta.Metadata?.forEach(item => {
+                                    if (item.Type === "WordBoundary" && item.Data?.text?.Text) {
+                                        cues.push({ offset: item.Data.Offset / 10000, duration: item.Data.Duration / 10000, text: item.Data.text.Text });
+                                    }
+                                });
+                            } else if (headers.split("\r\n").includes("Path:turn.end")) {
+                                if (audioChunks.length === 0) finish(new Error("No audio frames received"));
+                                else finish(null, { blob: new Blob(audioChunks, { type: "audio/mpeg" }), cues });
                             }
                         } else if (event.data instanceof ArrayBuffer) {
-                            const view = new DataView(event.data);
-                            const headerLen = view.getUint16(0);
-                            if (event.data.byteLength > headerLen + 2) {
-                                const audioSlice = event.data.slice(headerLen + 2);
-                                audioChunks.push(audioSlice);
-                            }
+                            if (event.data.byteLength < 2) throw new Error("Invalid Edge audio frame");
+                            const headerLen = new DataView(event.data).getUint16(0);
+                            if (headerLen + 2 > event.data.byteLength) throw new Error("Invalid Edge audio header");
+                            if (event.data.byteLength > headerLen + 2) audioChunks.push(event.data.slice(headerLen + 2));
                         }
-                    };
+                    } catch (error) {
+                        finish(error);
+                    }
+                };
 
-                    ws.onerror = () => {
-                        clearTimeout(timeout);
-                        if (!settled) {
-                            settled = true;
-                            reject(new Error("浏览器 WebSocket Origin 受限"));
-                        }
-                    };
-                } catch (err) {
-                    reject(err);
-                }
+                ws.onerror = () => finish(new Error("Edge WebSocket connection failed"));
+                ws.onclose = () => finish(new Error("Edge WebSocket closed before synthesis completed"));
             });
         }
 
-        // 方式 B: 调用用户自定义的后端 API 端点
-        async function synthesizeViaCustomApi(text, voice, rateStr, volumeStr, pitchStr) {
-            const url = document.getElementById("custom-api-url").value.trim();
-            const apiKey = document.getElementById("custom-api-key").value.trim();
-            if (!url) throw new Error("请填写自定义 API 地址");
-
-            const headers = { "Content-Type": "application/json" };
-            if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
-
-            const response = await fetch(url, {
-                method: "POST",
-                headers,
-                body: JSON.stringify({
-                    model: "edge-tts",
-                    input: text,
-                    text: text,
-                    voice: voice,
-                    rate: rateStr,
-                    volume: volumeStr,
-                    pitch: pitchStr
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`自定义 API 响应错误: HTTP ${response.status}`);
-            }
-            const blob = await response.blob();
-            return { blob, cues: generateEstimatedSubtitles(text, state.rate) };
-        }
-
-        // 辅助函数：将 Base64 PCM16 转换为标准可播放/可下载的 WAV Blob
-        function pcm16Base64ToWavBlob(base64Data, sampleRate = 24000) {
-            const binaryStr = atob(base64Data);
-            const len = binaryStr.length;
-            const pcmBytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
-                pcmBytes[i] = binaryStr.charCodeAt(i);
-            }
-
-            const wavHeader = new ArrayBuffer(44);
-            const view = new DataView(wavHeader);
-            const writeString = (offset, str) => {
-                for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-            };
-
-            writeString(0, "RIFF");
-            view.setUint32(4, 36 + pcmBytes.byteLength, true);
-            writeString(8, "WAVE");
-            writeString(12, "fmt ");
-            view.setUint32(16, 16, true); // PCM chunk size
-            view.setUint16(20, 1, true);  // PCM format
-            view.setUint16(22, 1, true);  // Mono (1 channel)
-            view.setUint32(24, sampleRate, true);
-            view.setUint32(28, sampleRate * 2, true); // Byte rate
-            view.setUint16(32, 2, true);  // Block align
-            view.setUint16(34, 16, true); // Bits per sample
-            writeString(36, "data");
-            view.setUint32(40, pcmBytes.byteLength, true);
-
-            return new Blob([wavHeader, pcmBytes], { type: "audio/wav" });
-        }
-
-        // 方式 B2: 云端神经网络 TTS 引擎 (当浏览器拦截 Edge WebSocket Origin 时，100% 还原粤语/方言/多国语言与男女声色)
-        async function synthesizeViaCloudNeuralTTS(text, voiceObj, rateVal, volumeVal, pitchVal) {
-            // 根据用户所选的 edge-tts 音色映射对应的男女声线与性格特征
-            const femaleVoices = ["Aoede", "Kore", "Leda", "Zephyr", "Callirrhoe", "Despina"];
-            const maleVoices = ["Puck", "Charon", "Fenrir", "Orus", "Iapetus", "Schedar"];
-            const hashIdx = voiceObj.ShortName.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
-            const voiceName = voiceObj.Gender === "Female"
-                ? femaleVoices[hashIdx % femaleVoices.length]
-                : maleVoices[hashIdx % maleVoices.length];
-
-            // 构建针对语言、地区方言（特别是香港粤语、东北话、陕西话、四川话、台湾国语等）与语速音调的精确指令
-            const localeDesc = LOCALE_NAME_MAP[voiceObj.Locale] || voiceObj.LocaleName || voiceObj.Locale;
-            let dialectInstruction = `Speak strictly in ${localeDesc} (${voiceObj.Locale}) as a ${voiceObj.Gender.toLowerCase()} speaker.`;
-            if (voiceObj.Locale === "zh-HK") {
-                dialectInstruction = "请严格使用纯正的中国香港粤语（广东话/Cantonese）朗读以下文字，即使文字是简体字也必须用粤语发音朗读，绝对不要说普通话。";
-            } else if (voiceObj.Locale === "zh-TW") {
-                dialectInstruction = "请使用自然温柔的中国台湾国语口音朗读以下文字。";
-            } else if (voiceObj.Locale.includes("liaoning")) {
-                dialectInstruction = "请使用地道的中国东北话（辽宁官话口音）朗读以下文字。";
-            } else if (voiceObj.Locale.includes("shaanxi")) {
-                dialectInstruction = "请使用地道的中国陕西话（关中话口音）朗读以下文字。";
-            } else if (voiceObj.Locale.includes("sichuan")) {
-                dialectInstruction = "请使用地道的中国四川话口音朗读以下文字。";
-            } else if (voiceObj.Locale.includes("shandong")) {
-                dialectInstruction = "请使用地道的中国山东话口音朗读以下文字。";
-            }
-
-            let prosodyHint = "";
-            if (rateVal >= 25) prosodyHint += " 语速偏快。";
-            else if (rateVal <= -25) prosodyHint += " 语速缓慢清晰。";
-            if (pitchVal >= 20) prosodyHint += " 音调偏高亢明亮。";
-            else if (pitchVal <= -20) prosodyHint += " 音调偏低沉浑厚。";
-
-            const promptText = `${dialectInstruction}${prosodyHint}\n请直接朗读以下文本内容：\n${text}`;
-
-            const apiKey = "";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
-            const payload = {
-                contents: [{ parts: [{ text: promptText }] }],
-                generationConfig: {
-                    responseModalities: ["AUDIO"],
-                    speechConfig: {
-                        voiceConfig: {
-                            prebuiltVoiceConfig: { voiceName }
-                        }
-                    }
-                }
-            };
-
-            let delay = 1000;
-            for (let attempt = 0; attempt < 3; attempt++) {
-                const res = await fetch(apiUrl, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
-                });
-                if (res.ok) {
-                    const result = await res.json();
-                    const part = result?.candidates?.[0]?.content?.parts?.[0];
-                    const audioData = part?.inlineData?.data;
-                    const mimeType = part?.inlineData?.mimeType || "audio/L16;rate=24000";
-                    if (audioData) {
-                        const rateMatch = mimeType.match(/rate=(\d+)/);
-                        const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
-                        const wavBlob = pcm16Base64ToWavBlob(audioData, sampleRate);
-                        return {
-                            blob: wavBlob,
-                            cues: generateEstimatedSubtitles(text, rateVal)
-                        };
-                    }
-                }
-                await new Promise(r => setTimeout(r, delay));
-                delay *= 2;
-            }
-            throw new Error("云端神经网络音频合成超时");
-        }
-
-        // 方式 C: 使用浏览器内置 Web Speech API (修复粤语/方言被误匹配为普通话男声的 Bug)
+        // Require the requested locale or an explicitly named dialect voice.
         function findBestBrowserVoice(sysVoices, voiceObj) {
             const targetLocale = voiceObj.Locale.toLowerCase();
             const shortKey = voiceObj.ShortName.split("-").pop().replace("Neural", "").replace("Multilingual", "");
-            const wantFemale = voiceObj.Gender === "Female";
-
-            // 已知女声与男声关键词识别表
-            const femaleKeywords = ["female", "woman", "girl", "xiaoxiao", "xiaoyi", "hiumaan", "hiugaai", "hsiaochen", "hsiaoyu", "sin-ji", "sinji", "tracy", "ting-ting", "meijia", "aria", "jenny", "sonia", "nanami", "sunhi", "huihui", "yaoyao", "lili", "女"];
-            const maleKeywords = ["male", "man", "boy", "yunxi", "yunjian", "yunyang", "wanlung", "yunjhe", "kangkang", "danny", "guy", "ryan", "keita", "injoon", "男"];
-
-            const isVoiceGenderMatch = (v) => {
-                const n = v.name.toLowerCase();
-                if (wantFemale) {
-                    if (maleKeywords.some(k => n.includes(k))) return false;
-                    return femaleKeywords.some(k => n.includes(k));
-                } else {
-                    if (femaleKeywords.some(k => n.includes(k))) return false;
-                    return maleKeywords.some(k => n.includes(k));
-                }
+            const localeMatches = voice => {
+                const lang = voice.lang.toLowerCase().replace(/_/g, "-");
+                return lang === targetLocale || (targetLocale === "zh-hk" && lang === "yue-hk");
             };
+            const nameMatches = voice => voice.name.toLowerCase().split(/[^a-z0-9]+/).includes(shortKey.toLowerCase());
+            const exactVoice = sysVoices.find(voice => nameMatches(voice) && (
+                localeMatches(voice) || (targetLocale.startsWith("zh-cn-") && voice.lang.toLowerCase().replace(/_/g, "-") === "zh-cn")
+            ));
+            if (exactVoice) return exactVoice;
 
-            // 1. 最高优先级：精确匹配当前 Edge Neural 语音名 (如 HiuGaai, HiuMaan, Xiaoxiao)
-            let exactName = sysVoices.find(v => v.name.toLowerCase().includes(shortKey.toLowerCase()));
-            if (exactName) return exactName;
-
-            // 2. 筛选出严格属于目标地区/方言的候选集 (绝不把 zh-HK 混入 zh-CN)
-            const localeCandidates = sysVoices.filter(v => {
-                const vLang = v.lang.toLowerCase().replace("_", "-");
-                const vName = v.name.toLowerCase();
-                if (targetLocale === "zh-hk") {
-                    return vLang === "zh-hk" || vLang === "yue-hk" || vLang.includes("hk") || vName.includes("hong kong") || vName.includes("cantonese") || vName.includes("粤");
-                }
-                if (targetLocale === "zh-tw") {
-                    return vLang === "zh-tw" || vLang.includes("tw") || vName.includes("taiwan");
-                }
-                if (targetLocale.startsWith("zh-cn")) {
-                    return vLang === "zh-cn" || (vLang.startsWith("zh") && !vLang.includes("hk") && !vLang.includes("tw"));
-                }
-                return vLang === targetLocale;
-            });
-
-            // 在相同地区/方言中优先找性别一致的语音
-            if (localeCandidates.length > 0) {
-                const genderMatched = localeCandidates.find(isVoiceGenderMatch);
-                if (genderMatched) return genderMatched;
-                // 退一步：排除明确相反性别的语音
-                const notOppositeGender = localeCandidates.find(v => {
-                    const n = v.name.toLowerCase();
-                    return wantFemale ? !maleKeywords.some(k => n.includes(k)) : !femaleKeywords.some(k => n.includes(k));
-                });
-                return notOppositeGender || localeCandidates[0];
-            }
-
-            // 3. 如果是非中文语种（如 en-US / en-GB），允许同语种下按性别匹配
-            if (!targetLocale.startsWith("zh")) {
-                const langPrefix = targetLocale.split("-")[0];
-                const sameLang = sysVoices.filter(v => v.lang.toLowerCase().startsWith(langPrefix));
-                return sameLang.find(isVoiceGenderMatch) || sameLang[0] || null;
-            }
-
-            // 若用户选了粤语 zh-HK 但本地操作系统未安装粤语语音包，返回 null 以便通知或交由云端合成
-            return null;
+            const femaleNames = ["xiaoxiao", "xiaoyi", "hiumaan", "hiugaai", "hsiaochen", "hsiaoyu", "sin-ji", "sinji", "tracy", "ting-ting", "meijia", "aria", "jenny", "sonia", "nanami", "sunhi", "huihui", "yaoyao", "lili"];
+            const maleNames = ["yunxi", "yunjian", "yunyang", "wanlung", "yunjhe", "kangkang", "danny", "guy", "ryan", "keita", "injoon"];
+            const genderMatches = voice => {
+                const name = voice.name.toLowerCase();
+                const words = name.split(/[^a-z0-9]+/);
+                const normalizedName = ` ${words.join(" ")} `;
+                const female = /\b(female|woman|girl)\b/.test(name) || femaleNames.some(key => normalizedName.includes(` ${key.replace(/-/g, " ")} `)) || name.includes("\u5973");
+                const male = /\b(male|man|boy)\b/.test(name) || maleNames.some(key => words.includes(key)) || name.includes("\u7537");
+                return voiceObj.Gender === "Female" ? female && !male : male && !female;
+            };
+            return sysVoices.find(voice => localeMatches(voice) && genderMatches(voice)) || null;
         }
 
-        function synthesizeViaBrowserSpeech(text, voiceObj, rateVal, volumeVal, pitchVal) {
+        async function synthesizeViaBrowserSpeech(text, voiceObj, rateVal, volumeVal, pitchVal, signal) {
+            signal?.throwIfAborted();
+            if (!("speechSynthesis" in window)) throw new Error("This browser does not support local speech synthesis");
+            const speech = window.speechSynthesis;
+            let sysVoices = speech.getVoices();
+            if (sysVoices.length === 0) {
+                sysVoices = await new Promise((resolve, reject) => {
+                    const finish = () => {
+                        clearTimeout(timeout);
+                        speech.removeEventListener("voiceschanged", onVoices);
+                        signal?.removeEventListener("abort", onAbort);
+                    };
+                    const onVoices = () => {
+                        const voices = speech.getVoices();
+                        if (voices.length === 0) return;
+                        finish();
+                        resolve(voices);
+                    };
+                    const onAbort = () => {
+                        finish();
+                        reject(new DOMException("Synthesis cancelled", "AbortError"));
+                    };
+                    const timeout = setTimeout(() => { finish(); resolve(speech.getVoices()); }, 1500);
+                    speech.addEventListener("voiceschanged", onVoices);
+                    signal?.addEventListener("abort", onAbort, { once: true });
+                });
+            }
+            signal?.throwIfAborted();
+            const matchedVoice = findBestBrowserVoice(sysVoices, voiceObj);
+            if (!matchedVoice) throw new Error(`No local ${voiceObj.Gender.toLowerCase()} voice matches ${voiceObj.Locale}. Install a matching voice pack.`);
+
             return new Promise((resolve, reject) => {
-                if (!("speechSynthesis" in window)) {
-                    reject(new Error("当前浏览器不支持 Web Speech API"));
-                    return;
-                }
-                window.speechSynthesis.cancel();
-
-                const sysVoices = window.speechSynthesis.getVoices();
-                const matchedVoice = findBestBrowserVoice(sysVoices, voiceObj);
-
-                if (voiceObj.Locale === "zh-HK" && !matchedVoice) {
-                    showToast("检测到您的系统未安装本地粤语语音包，建议切换为「智能云端神经网络合成」获取纯正粤语女声", "warning");
-                }
-
+                speech.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = voiceObj.Locale === "zh-HK" ? "zh-HK" : voiceObj.Locale;
-                if (matchedVoice) {
-                    utterance.voice = matchedVoice;
-                }
-
-                // 将 edge-tts 的百分比参数映射到 Web Speech API 标准范围
+                utterance.lang = matchedVoice.lang;
+                utterance.voice = matchedVoice;
                 utterance.rate = Math.max(0.25, Math.min(2.0, 1 + rateVal / 100));
-                utterance.volume = Math.max(0.05, Math.min(1.0, 1 + volumeVal / 100));
-                // 如果本地缺少对应女声/男声，通过基础音调偏移予以补偿区分
-                const genderPitchOffset = (!matchedVoice && voiceObj.Gender === "Female") ? 0.25 : 0;
-                utterance.pitch = Math.max(0.2, Math.min(2.0, 1 + (pitchVal / 120) + genderPitchOffset));
-
+                utterance.volume = Math.max(0, Math.min(1.0, 1 + volumeVal / 100));
+                utterance.pitch = Math.max(0.2, Math.min(2.0, 1 + pitchVal / 120));
                 state.subtitlesCueList = generateEstimatedSubtitles(text, rateVal);
+                state.currentUtterance = utterance;
+
+                const finish = error => {
+                    signal?.removeEventListener("abort", onAbort);
+                    utterance.onend = utterance.onerror = utterance.onboundary = null;
+                    if (state.currentUtterance === utterance) state.currentUtterance = null;
+                    if (error) reject(error);
+                    else resolve();
+                };
+                const onAbort = () => {
+                    finish(new DOMException("Synthesis cancelled", "AbortError"));
+                    speech.cancel();
+                };
+                signal?.addEventListener("abort", onAbort, { once: true });
 
                 utterance.onboundary = (event) => {
-                    if (event.name === "word") {
-                        const word = text.substr(event.charIndex, event.charLength || 6);
-                        document.getElementById("WordBoundary-display").textContent = `朗读: ${word}`;
+                    if (!signal?.aborted && event.name === "word") {
+                        const word = text.slice(event.charIndex, event.charIndex + (event.charLength || 6));
+                        document.getElementById("WordBoundary-display").textContent = `Speech: ${word}`;
                     }
                 };
 
                 utterance.onend = () => {
+                    if (signal?.aborted) return;
                     stopVisualizer();
-                    setSynthesizingUI(false, `播放完成 (本地引擎: ${matchedVoice ? matchedVoice.name : utterance.lang})`);
-                    resolve();
+                    setSynthesizingUI(false, `Playback complete (local voice: ${matchedVoice.name})`);
+                    finish();
                 };
 
-                utterance.onerror = () => {
-                    stopVisualizer();
-                    setSynthesizingUI(false, "语音播放已停止");
-                    resolve();
-                };
+                utterance.onerror = event => finish(new Error(`Browser speech failed: ${event.error || "unknown error"}`));
 
                 startVisualizer();
-                window.speechSynthesis.speak(utterance);
+                try { speech.speak(utterance); } catch (error) { finish(error); }
             });
         }
 
-        // 根据文本和语速生成精准的 WebVTT 时间轴字幕 (用于导出 .vtt / .srt)
+        // Estimate subtitle timing when no real word boundaries are available.
         function generateEstimatedSubtitles(text, ratePercent) {
             const speedFactor = Math.max(0.3, 1 + ratePercent / 100);
             const clauses = text.split(/([，。！？；,.!?;：\n]+)/).reduce((acc, cur, idx, arr) => {
@@ -1266,7 +1122,7 @@
             return `${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}.${String(millis).padStart(3, "0")}`;
         }
 
-        // 统一触发语音生成与播放流程
+        // Only the current request may publish results or start a fallback engine.
         async function handleSynthesizeAndPlay() {
             const text = document.getElementById("tts-text").value.trim();
             if (!text) {
@@ -1274,76 +1130,122 @@
                 return;
             }
 
-            const mode = document.getElementById("api-mode-select").value;
-            const voice = state.selectedVoice.ShortName;
-            const rateStr = formatSignedParam(state.rate, "%");
-            const volumeStr = formatSignedParam(state.volume, "%");
-            const pitchStr = formatSignedParam(state.pitch, "Hz");
+            stopAllPlayback();
+            clearAudioResult();
+            const controller = new AbortController();
+            const { signal } = controller;
+            state.synthesisController = controller;
+            const voice = { ...state.selectedVoice };
+            const { rate, volume, pitch } = state;
+            const synthesis = { text, voice, rate, volume, pitch, estimated: true, extension: null };
+            const rateStr = formatSignedParam(rate, "%");
+            const volumeStr = formatSignedParam(volume, "%");
+            const pitchStr = formatSignedParam(pitch, "Hz");
 
-            setSynthesizingUI(true, `正在请求合成 [${voice}] (${rateStr}, ${volumeStr}, ${pitchStr})...`);
+            document.getElementById("engine-status-tag").textContent = "Edge TTS";
+            setSynthesizingUI(true, `Requesting Edge TTS [${voice.ShortName}]...`);
 
             try {
-                if (mode === "custom_api") {
-                    const { blob, cues } = await synthesizeViaCustomApi(text, voice, rateStr, volumeStr, pitchStr);
-                    state.subtitlesCueList = cues;
-                    playAudioBlob(blob, "自定义 API MP3 音频流合成成功");
-                } else if (mode === "browser_tts") {
-                    setSynthesizingUI(true, `正在通过本地语音引擎朗读 [${voice}]...`);
-                    await synthesizeViaBrowserSpeech(text, state.selectedVoice, state.rate, state.volume, state.pitch);
-                } else {
-                    // 智能云端模式：
-                    // 1. 优先尝试直连 Edge WebSocket
-                    // 2. 若浏览器拦截 WebSocket Origin，则调用云端神经网络 TTS 接口生成真实粤语/方言/对应性别音频流
-                    // 3. 兜底回退到严格区分地区与性别的本地语音引擎
-                    try {
-                        const { blob, cues } = await synthesizeViaEdgeWebSocket(text, voice, rateStr, volumeStr, pitchStr);
-                        state.subtitlesCueList = cues.length > 0 ? cues : generateEstimatedSubtitles(text, state.rate);
-                        playAudioBlob(blob, `Edge Neural 音频合成成功 [${state.selectedVoice.FriendlyName}]`);
-                    } catch (wsErr) {
-                        try {
-                            setSynthesizingUI(true, `正在通过云端神经网络合成 [${state.selectedVoice.FriendlyName} - ${state.selectedVoice.Gender === 'Female' ? '女声' : '男声'}]...`);
-                            const { blob, cues } = await synthesizeViaCloudNeuralTTS(
-                                text,
-                                state.selectedVoice,
-                                state.rate,
-                                state.volume,
-                                state.pitch
-                            );
-                            state.subtitlesCueList = cues;
-                            playAudioBlob(blob, `云端神经网络语音合成成功 [${state.selectedVoice.FriendlyName}]`);
-                        } catch (cloudErr) {
-                            setSynthesizingUI(true, `正在使用严格匹配的本地引擎播放 [${state.selectedVoice.FriendlyName}]...`);
-                            await synthesizeViaBrowserSpeech(text, state.selectedVoice, state.rate, state.volume, state.pitch);
-                        }
-                    }
+                let result;
+                try {
+                    result = await synthesizeViaEdgeWebSocket(text, voice.ShortName, rateStr, volumeStr, pitchStr, signal);
+                } catch (error) {
+                    if (signal.aborted || state.synthesisController !== controller) return;
+                    document.getElementById("engine-status-tag").textContent = "Browser speech";
+                    setSynthesizingUI(true, `Edge TTS unavailable; using browser speech [${voice.ShortName}]...`);
+                    showToast("Edge TTS is unavailable. Trying a local voice; MP3 download is not available in this mode.", "warning");
+                    state.lastSynthesis = synthesis;
+                    await synthesizeViaBrowserSpeech(text, voice, rate, volume, pitch, signal);
+                    return;
                 }
-            } catch (err) {
-                setSynthesizingUI(false, `合成失败: ${err.message}`);
-                showToast(err.message, "error");
+                if (signal.aborted || state.synthesisController !== controller) return;
+                state.subtitlesCueList = result.cues.length > 0 ? result.cues : generateEstimatedSubtitles(text, rate);
+                synthesis.estimated = result.cues.length === 0;
+                await playAudioBlob(result.blob, `Edge TTS ready [${voice.FriendlyName}]`, synthesis, signal);
+            } catch (error) {
+                if (signal.aborted || state.synthesisController !== controller) return;
+                stopVisualizer();
+                setSynthesizingUI(false, `Synthesis failed: ${error.message}`);
+                showToast(error.message, "error");
             }
         }
 
-        function playAudioBlob(blob, statusMsg) {
+        async function playAudioBlob(blob, statusMsg, synthesis, signal) {
+            signal?.throwIfAborted();
+            const extensions = { "audio/mpeg": "mp3", "audio/mp3": "mp3", "audio/wav": "wav", "audio/x-wav": "wav", "audio/ogg": "ogg" };
+            const extension = extensions[blob.type.split(";")[0].toLowerCase()];
+            if (!extension) throw new Error("Unsupported audio format");
             if (state.lastAudioBlobUrl) {
                 URL.revokeObjectURL(state.lastAudioBlobUrl);
             }
-            state.lastAudioBlobUrl = URL.createObjectURL(blob);
+            const url = URL.createObjectURL(blob);
+            state.lastAudioBlobUrl = url;
+            synthesis.extension = extension;
+            state.lastSynthesis = synthesis;
             const audioEl = document.getElementById("audio-player");
-            audioEl.src = state.lastAudioBlobUrl;
+            audioEl.src = url;
             audioEl.classList.remove("hidden");
             document.getElementById("btn-download-mp3").disabled = false;
+            document.getElementById("btn-download-mp3").querySelector("span").textContent = `Download ${extension.toUpperCase()}`;
+            const isCurrentMedia = () => state.lastAudioBlobUrl === url && state.lastSynthesis === synthesis;
 
-            startVisualizer();
-            audioEl.play();
-            setSynthesizingUI(true, statusMsg);
-
-            audioEl.onended = () => {
-                stopVisualizer();
-                setSynthesizingUI(false, "MP3 音频播放完毕");
+            audioEl.onplaying = () => {
+                if (!isCurrentMedia() || audioEl.paused) return;
+                startVisualizer();
+                setSynthesizingUI(true, statusMsg);
             };
+            audioEl.onpause = () => {
+                if (!isCurrentMedia()) return;
+                stopVisualizer();
+                setSynthesizingUI(false, "Audio paused");
+            };
+            audioEl.onended = () => {
+                if (!isCurrentMedia()) return;
+                stopVisualizer();
+                setSynthesizingUI(false, "Audio playback complete");
+            };
+            audioEl.onerror = () => {
+                if (!isCurrentMedia()) return;
+                stopVisualizer();
+                setSynthesizingUI(false, "Audio playback failed. The audio could not be loaded or decoded.");
+            };
+            audioEl.ontimeupdate = () => {
+                if (!isCurrentMedia()) return;
+                const time = audioEl.currentTime * 1000;
+                const cue = state.subtitlesCueList.find(item => time >= item.offset && time < item.offset + item.duration);
+                document.getElementById("WordBoundary-display").textContent = cue?.text || "";
+            };
+
+            try {
+                await audioEl.play();
+            } catch (error) {
+                if (!isCurrentMedia() || signal?.aborted) return;
+                stopVisualizer();
+                setSynthesizingUI(false, `Playback could not start: ${error.message}. Use the audio controls to retry.`);
+                showToast("Playback could not start. Use the audio controls to retry or download the audio.", "warning");
+            }
+        }
+
+        function clearAudioResult() {
+            const audioEl = document.getElementById("audio-player");
+            audioEl.onplaying = audioEl.onpause = audioEl.onended = audioEl.onerror = audioEl.ontimeupdate = null;
+            audioEl.pause();
+            audioEl.removeAttribute("src");
+            audioEl.load();
+            audioEl.classList.add("hidden");
+            if (state.lastAudioBlobUrl) URL.revokeObjectURL(state.lastAudioBlobUrl);
+            state.lastAudioBlobUrl = null;
+            state.lastSynthesis = null;
+            state.subtitlesCueList = [];
+            document.getElementById("btn-download-mp3").disabled = true;
+            document.getElementById("btn-download-mp3").querySelector("span").textContent = "Download MP3";
+            document.getElementById("WordBoundary-display").textContent = "";
         }
 
         function stopAllPlayback() {
+            const controller = state.synthesisController;
+            state.synthesisController = null;
+            controller?.abort();
             if ("speechSynthesis" in window) {
                 window.speechSynthesis.cancel();
             }
@@ -1472,6 +1374,8 @@
             populateLocaleDropdown();
             renderVoiceList();
             updateCodePreview();
+            renderSampleSelection();
+            document.getElementById("char-counter").textContent = `${document.getElementById("tts-text").value.length} characters`;
             drawIdleWaveform();
 
             // 预加载浏览器本地语音列表
@@ -1555,28 +1459,23 @@
                 showToast("已重置语速、音量和音调为默认值", "info");
             });
 
-            // 5. API 模式切换与字幕复选框
-            document.getElementById("api-mode-select").addEventListener("change", (e) => {
-                const box = document.getElementById("custom-api-box");
-                if (e.target.value === "custom_api") {
-                    box.classList.remove("hidden");
-                } else {
-                    box.classList.add("hidden");
-                }
-            });
-
+            // Subtitle option
             document.getElementById("chk-subtitles").addEventListener("change", updateCodePreview);
 
             // 6. 示例文本快捷填入与字数统计
             const textArea = document.getElementById("tts-text");
             textArea.addEventListener("input", () => {
-                document.getElementById("char-counter").textContent = `${textArea.value.length} 字符`;
+                document.getElementById("char-counter").textContent = `${textArea.value.length} characters`;
+                state.selectedSample = null;
+                renderSampleSelection();
                 updateCodePreview();
             });
 
             document.getElementById("btn-clear-text").addEventListener("click", () => {
                 textArea.value = "";
-                document.getElementById("char-counter").textContent = "0 字符";
+                document.getElementById("char-counter").textContent = "0 characters";
+                state.selectedSample = null;
+                renderSampleSelection();
                 updateCodePreview();
             });
 
@@ -1584,9 +1483,8 @@
                 btn.addEventListener("click", () => {
                     const key = btn.getAttribute("data-sample");
                     if (SAMPLE_TEXTS[key]) {
-                        textArea.value = SAMPLE_TEXTS[key];
-                        document.getElementById("char-counter").textContent = `${textArea.value.length} 字符`;
-                        // 自动匹配一个适合该示例语言的音色
+                        setSampleText(key);
+                        // Keep manual sample selection and voice selection in sync.
                         const targetPrefix = key === "zh" ? "zh-CN-Xiaoxiao" 
                                            : key === "hk" ? "zh-HK-HiuGaai" 
                                            : key === "en" ? "en-US-Aria" 
@@ -1594,9 +1492,7 @@
                                            : "Multilingual";
                         const matchingVoice = state.voices.find(v => v.ShortName.includes(targetPrefix));
                         if (matchingVoice) {
-                            state.selectedVoice = matchingVoice;
-                            document.getElementById("current-selected-badge").textContent = matchingVoice.ShortName;
-                            renderVoiceList();
+                            selectVoice(matchingVoice, false);
                         }
                         updateCodePreview();
                     }
@@ -1608,19 +1504,24 @@
             document.getElementById("btn-stop").addEventListener("click", stopAllPlayback);
 
             document.getElementById("btn-download-mp3").addEventListener("click", () => {
-                if (!state.lastAudioBlobUrl) return;
+                if (!state.lastAudioBlobUrl || !state.lastSynthesis?.extension) return;
                 const a = document.createElement("a");
                 a.href = state.lastAudioBlobUrl;
-                a.download = `${state.selectedVoice.ShortName}_${Date.now()}.mp3`;
+                a.download = `${state.lastSynthesis.voice.ShortName}_${Date.now()}.${state.lastSynthesis.extension}`;
                 a.click();
-                showToast("已开始下载 MP3 音频文件", "success");
+                showToast("Audio download started", "success");
             });
 
             document.getElementById("btn-download-srt").addEventListener("click", () => {
-                const text = textArea.value.trim() || "Edge-TTS Subtitle";
+                const synthesis = state.lastSynthesis;
+                const text = synthesis ? synthesis.text : textArea.value.trim();
+                if (!text) {
+                    showToast("Enter text or synthesize audio before exporting subtitles", "warning");
+                    return;
+                }
                 const cues = state.subtitlesCueList.length > 0 
                     ? state.subtitlesCueList 
-                    : generateEstimatedSubtitles(text, state.rate);
+                    : generateEstimatedSubtitles(text, synthesis ? synthesis.rate : state.rate);
 
                 let vttContent = "WEBVTT\n\n";
                 cues.forEach((c, idx) => {
@@ -1633,10 +1534,10 @@
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
                 a.href = url;
-                a.download = `${state.selectedVoice.ShortName}_subtitles.vtt`;
+                a.download = `${(synthesis ? synthesis.voice : state.selectedVoice).ShortName}_subtitles.vtt`;
                 a.click();
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
-                showToast("已导出 WebVTT (.vtt) 字幕文件", "success");
+                showToast(synthesis && !synthesis.estimated ? "WebVTT subtitles exported" : "WebVTT exported with estimated timing; timing may differ from the audio", "success");
             });
 
             // 8. CLI / Python / SSML 代码标签切换与复制
