@@ -18,5 +18,8 @@ test("Vite emits every registered tool at its GitHub Pages URL", async () => {
     const stylesheet = homepage.match(/href="\/ai-toybox\/(assets\/[^"]+\.css)"/)?.[1];
     assert.ok(stylesheet && files.has(stylesheet), "The homepage stylesheet must resolve under the Pages base path");
     assert.match(files.get("404.html"), /id="home" href="\/ai-toybox\/"/);
+    const edgeTool = files.get("edge_tts/index.html");
+    assert.match(edgeTool, /<script id="edge-tts-app">/);
+    assert.doesNotMatch(edgeTool, /<script[^>]+src="\/ai-toybox\//, "The speech tool should keep its JavaScript inline");
     assert.deepEqual(JSON.parse(files.get("routes.json")), routes);
 });

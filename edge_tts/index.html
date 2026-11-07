@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
-        tailwind.config = {
+        if (window.tailwind) window.tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
@@ -73,10 +73,70 @@
             transform: scale(1.15);
             background: #7dd3fc;
         }
+        input[type=range]::-moz-range-track {
+            height: 6px;
+            background: #334155;
+            border-radius: 999px;
+        }
+        input[type=range]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border: 0;
+            border-radius: 50%;
+            background: #38bdf8;
+        }
         .glass-panel {
             background: rgba(30, 41, 59, 0.75);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .studio-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            align-items: stretch;
+        }
+        .voice-panel, .workbench-panel {
+            min-width: 0;
+        }
+        .voice-list {
+            max-height: 24rem;
+            max-height: clamp(12rem, 45dvh, 24rem);
+            min-height: 0;
+            overflow-y: auto;
+            overscroll-behavior-y: contain;
+        }
+        .voice-card {
+            border-color: #334155;
+            background-color: rgba(15, 23, 42, 0.55);
+        }
+        .voice-card:hover, .voice-card:focus-visible {
+            border-color: #64748b;
+        }
+        .voice-card[aria-pressed="true"] {
+            border-color: #38bdf8;
+            background-color: rgba(56, 189, 248, 0.12);
+        }
+        .gender-btn[aria-pressed="true"] {
+            background-color: #0ea5e9;
+            color: #fff;
+        }
+        .cat-chip[aria-pressed="true"] {
+            background-color: rgba(14, 165, 233, 0.2);
+            box-shadow: inset 0 0 0 1px rgba(14, 165, 233, 0.35);
+            color: #7dd3fc;
+        }
+        .prosody-grid {
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+        }
+        @media (min-width: 64rem) {
+            .studio-layout {
+                grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+            }
+            .voice-list {
+                flex: 1;
+                max-height: none;
+                contain: size;
+            }
         }
     </style>
 </head>
@@ -92,11 +152,10 @@
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="text-lg font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-sky-400 bg-clip-text text-transparent">
-                            edge-tts Studio
+                            Edge TTS Studio
                         </h1>
-                        <span class="text-xs px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 font-mono">v7.2+</span>
                     </div>
-                    <p class="text-xs text-slate-400">基于 rany2/edge-tts 的参数调试、多语言检索与实时语音合成工作台</p>
+                    <p class="text-xs text-slate-400">浏览微软 Edge 音色、调节语音参数并在线合成</p>
                 </div>
             </div>
 
@@ -105,7 +164,7 @@
                 <div class="hidden sm:flex items-center gap-4 bg-slate-900/90 border border-slate-800 px-3.5 py-1.5 rounded-xl text-xs">
                     <div class="flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span class="text-slate-400">支持语言:</span>
+                        <span class="text-slate-400">语言与地区</span>
                         <span id="stat-locales" class="font-bold text-white font-mono">--</span>
                     </div>
                     <div class="h-3 w-px bg-slate-800"></div>
@@ -121,19 +180,19 @@
     </header>
 
     <!-- 主体内容区 -->
-    <main class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <main class="studio-layout max-w-7xl w-full mx-auto p-4 lg:p-6 gap-4 lg:gap-6">
         
-        <!-- 左侧：所有支持的语言与语音浏览器 (占 5 列) -->
-        <section class="lg:col-span-5 flex flex-col glass-panel rounded-2xl overflow-hidden h-[680px] lg:h-[calc(100vh-120px)]">
+        <!-- Voice catalog -->
+        <section class="voice-panel flex flex-col glass-panel rounded-2xl overflow-hidden">
             <!-- 搜索与过滤头部 -->
             <div class="p-4 border-b border-slate-800/80 space-y-3 bg-slate-900/50">
-                <div class="flex items-center justify-between">
+                <div class="flex flex-wrap items-center justify-between gap-2">
                     <h2 class="text-sm font-semibold flex items-center gap-2 text-slate-200">
                         <i data-lucide="globe-2" class="w-4 h-4 text-sky-400"></i>
                         <span>支持的语言与语音库 (Voices)</span>
                     </h2>
                     <button id="btn-sync-voices" title="从微软官方接口同步全部 320+ 语音" 
-                            class="text-xs flex items-center gap-1 text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 px-2.5 py-1 rounded-lg transition">
+                            class="text-xs flex items-center gap-1 text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 disabled:opacity-60 px-2.5 py-1 rounded-lg transition">
                         <i data-lucide="refresh-cw" class="w-3 h-3" id="sync-icon"></i>
                         <span id="sync-text">同步云端完整列表</span>
                     </button>
@@ -142,7 +201,7 @@
                 <!-- 关键字搜索框 -->
                 <div class="relative">
                     <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
-                    <input type="text" id="voice-search" placeholder="搜索语言、地区、ShortName (如 Xiaoxiao, zh-CN, ja-JP)..." 
+                    <input type="search" id="voice-search" aria-label="搜索音色" placeholder="搜索语言、地区、ShortName (如 Xiaoxiao, zh-CN, ja-JP)..."
                            class="w-full bg-slate-950/90 border border-slate-800 focus:border-sky-500 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none transition">
                 </div>
 
@@ -150,13 +209,13 @@
                 <div class="grid grid-cols-12 gap-2">
                     <!-- 语言/地区下拉选择 -->
                     <div class="col-span-7">
-                        <select id="locale-filter" class="w-full bg-slate-950/90 border border-slate-800 focus:border-sky-500 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
+                        <select id="locale-filter" aria-label="按语言或地区筛选" class="w-full bg-slate-950/90 border border-slate-800 focus:border-sky-500 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
                             <option value="ALL">🌍 所有语言与地区 (All Locales)</option>
                         </select>
                     </div>
                     <!-- 性别筛选 -->
                     <div class="col-span-5 flex bg-slate-950/90 p-0.5 rounded-xl border border-slate-800">
-                        <button data-gender="ALL" class="gender-btn flex-1 text-xs py-1 rounded-lg bg-sky-500 text-white font-medium transition">全部</button>
+                        <button data-gender="ALL" aria-pressed="true" class="gender-btn flex-1 text-xs py-1 rounded-lg text-slate-400 hover:text-slate-200 transition">全部</button>
                         <button data-gender="Female" class="gender-btn flex-1 text-xs py-1 rounded-lg text-slate-400 hover:text-slate-200 transition">女声</button>
                         <button data-gender="Male" class="gender-btn flex-1 text-xs py-1 rounded-lg text-slate-400 hover:text-slate-200 transition">男声</button>
                     </div>
@@ -164,7 +223,7 @@
 
                 <!-- 分类标签筛选 (ContentCategories / VoicePersonalities) -->
                 <div class="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-[11px]" id="category-chips">
-                    <button data-cat="ALL" class="cat-chip shrink-0 px-2.5 py-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">全部特性</button>
+                    <button data-cat="ALL" aria-pressed="true" class="cat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200">全部特性</button>
                     <button data-cat="Multilingual" class="cat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200">🔥 多语言混合 (Multilingual)</button>
                     <button data-cat="Conversation" class="cat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200">自然对话</button>
                     <button data-cat="News" class="cat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200">新闻播报</button>
@@ -174,48 +233,47 @@
             </div>
 
             <!-- 语音列表滚动容器 -->
-            <div id="voice-list-container" class="flex-1 overflow-y-auto p-3 space-y-2">
+            <div id="voice-list-container" class="voice-list p-3 space-y-2">
                 <!-- 动态渲染语音卡片 -->
             </div>
 
             <!-- 底部列表状态栏 -->
-            <div class="px-4 py-2.5 bg-slate-900/80 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+            <div class="px-4 py-2.5 bg-slate-900/80 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
                 <span>当前筛选结果: <strong id="filtered-count" class="text-slate-200">0</strong> 个音色</span>
-                <span class="font-mono text-[11px] text-sky-400" id="current-selected-badge">zh-CN-XiaoxiaoNeural</span>
+                <span class="min-w-0 break-all font-mono text-[11px] text-sky-400" id="current-selected-badge">zh-CN-XiaoxiaoNeural</span>
             </div>
         </section>
 
-        <!-- 右侧：参数控制面板、文本合成器与 CLI/Python 代码生成器 (占 7 列) -->
-        <section class="lg:col-span-7 flex flex-col gap-6">
+        <!-- Synthesis controls and player -->
+        <section class="workbench-panel glass-panel rounded-2xl">
             
-            <!-- 1. Edge-TTS 可控参数面板 (Rate, Volume, Pitch & 引擎配置) -->
-            <div class="glass-panel rounded-2xl p-5 space-y-5">
+            <!-- Prosody controls -->
+            <div class="p-4 sm:p-5 space-y-4">
                 <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
                     <div class="flex items-center gap-2">
                         <i data-lucide="sliders" class="w-4 h-4 text-sky-400"></i>
-                        <h2 class="text-sm font-semibold text-slate-200">可控制参数配置 (Prosody & Options)</h2>
+                        <h2 class="text-sm font-semibold text-slate-200">合成参数</h2>
                     </div>
                     <button id="btn-reset-params" class="text-xs text-slate-400 hover:text-sky-400 flex items-center gap-1 transition">
                         <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-                        <span>重置默认参数 (+0%)</span>
+                        <span>恢复默认</span>
                     </button>
                 </div>
 
                 <!-- 三个核心可调参数滑块 -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="prosody-grid grid gap-3">
                     <!-- Rate 语速控制 -->
                     <div class="bg-slate-900/70 border border-slate-800/90 rounded-xl p-3.5 space-y-2">
                         <div class="flex items-center justify-between">
                             <label for="param-rate" class="text-xs font-medium text-slate-300 flex items-center gap-1.5">
                                 <i data-lucide="gauge" class="w-3.5 h-3.5 text-sky-400"></i>
-                                <span>语速 (Rate)</span>
+                                <span>语速</span>
                             </label>
                             <span id="val-rate" class="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">+0%</span>
                         </div>
                         <input type="range" id="param-rate" min="-100" max="100" step="5" value="0" class="w-full">
                         <div class="flex justify-between text-[10px] text-slate-500 font-mono">
                             <span>-100% (慢)</span>
-                            <span>--rate</span>
                             <span>+100% (快)</span>
                         </div>
                     </div>
@@ -225,14 +283,13 @@
                         <div class="flex items-center justify-between">
                             <label for="param-volume" class="text-xs font-medium text-slate-300 flex items-center gap-1.5">
                                 <i data-lucide="volume-2" class="w-3.5 h-3.5 text-emerald-400"></i>
-                                <span>音量 (Volume)</span>
+                                <span>音量</span>
                             </label>
                             <span id="val-volume" class="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">+0%</span>
                         </div>
                         <input type="range" id="param-volume" min="-100" max="100" step="5" value="0" class="w-full">
                         <div class="flex justify-between text-[10px] text-slate-500 font-mono">
                             <span>-100% (轻)</span>
-                            <span>--volume</span>
                             <span>+100% (响)</span>
                         </div>
                     </div>
@@ -242,53 +299,14 @@
                         <div class="flex items-center justify-between">
                             <label for="param-pitch" class="text-xs font-medium text-slate-300 flex items-center gap-1.5">
                                 <i data-lucide="music" class="w-3.5 h-3.5 text-purple-400"></i>
-                                <span>音调 (Pitch)</span>
+                                <span>音调</span>
                             </label>
                             <span id="val-pitch" class="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">+0Hz</span>
                         </div>
                         <input type="range" id="param-pitch" min="-100" max="100" step="5" value="0" class="w-full">
                         <div class="flex justify-between text-[10px] text-slate-500 font-mono">
                             <span>-100Hz (低沉)</span>
-                            <span>--pitch</span>
                             <span>+100Hz (高亢)</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Default engine and subtitle settings -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                    <!-- Default synthesis engine -->
-                    <div class="bg-slate-900/50 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between">
-                        <div class="flex items-center justify-between mb-1.5">
-                            <span class="text-xs font-medium text-slate-300 flex items-center gap-1.5">
-                                <i data-lucide="cpu" class="w-3.5 h-3.5 text-amber-400"></i>
-                                <span>默认语音合成引擎</span>
-                            </span>
-                            <span class="text-[11px] text-emerald-400 font-mono" id="engine-status-tag">Edge TTS</span>
-                        </div>
-                        <p class="text-xs text-slate-300">优先使用 Edge TTS；浏览器限制连接时尝试本地语音，无需 API Key。</p>
-                        <div id="local-preview-options" class="hidden mt-2 space-y-2">
-                            <label for="local-preview-voice" class="block text-xs text-slate-300">Choose a local voice for preview</label>
-                            <select id="local-preview-voice" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-xs"></select>
-                            <button type="button" id="btn-preview-local" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-sky-300">Play local preview</button>
-                            <p class="text-[11px] text-slate-400">Local preview uses the named voice and cannot export MP3.</p>
-                        </div>
-                    </div>
-
-                    <!-- 字幕与输出文件配置 (对应 edge-tts --write-media / --write-subtitles) -->
-                    <div class="bg-slate-900/50 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between">
-                        <div class="flex items-center justify-between mb-1.5">
-                            <span class="text-xs font-medium text-slate-300 flex items-center gap-1.5">
-                                <i data-lucide="subtitles" class="w-3.5 h-3.5 text-sky-400"></i>
-                                <span>字幕与流媒体边界 (SubMaker)</span>
-                            </span>
-                            <span class="text-[10px] font-mono text-slate-400">24kHz 48kbps MP3</span>
-                        </div>
-                        <div class="flex items-center gap-4 pt-1">
-                            <label class="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer">
-                                <input type="checkbox" id="chk-subtitles" checked class="rounded bg-slate-950 border-slate-700 text-sky-500 focus:ring-0">
-                                <span>代码示例同时导出 SRT 字幕</span>
-                            </label>
                         </div>
                     </div>
                 </div>
@@ -296,16 +314,16 @@
             </div>
 
             <!-- 2. 文本输入与语音合成播放器区域 -->
-            <div class="glass-panel rounded-2xl p-5 space-y-4">
+            <div class="border-t border-slate-800/80 p-4 sm:p-5 space-y-4">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <div class="flex items-center gap-2">
                         <i data-lucide="message-square-text" class="w-4 h-4 text-sky-400"></i>
-                        <h2 class="text-sm font-semibold text-slate-200">合成文本输入与在线试听 (--text)</h2>
+                        <h2 class="text-sm font-semibold text-slate-200">合成文本与在线试听</h2>
                     </div>
 
-                    <!-- 快速示例文本按钮 -->
+                    <!-- Sample text shortcuts -->
                     <div class="flex items-center gap-1.5 flex-wrap">
-                        <span class="text-[11px] text-slate-400 mr-1">填入示例:</span>
+                        <span class="text-[11px] text-slate-400 mr-1">填入示例文本</span>
                         <button data-sample="zh" class="sample-btn text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">🇨🇳 中文普通话</button>
                         <button data-sample="hk" class="sample-btn text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-500/30 transition">🇭🇰 香港粤语</button>
                         <button data-sample="en" class="sample-btn text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">🇺🇸 英文科技</button>
@@ -313,21 +331,22 @@
                         <button data-sample="multi" class="sample-btn text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">🌐 多语种混读</button>
                     </div>
                 </div>
+                <p class="text-[11px] text-slate-400">选择音色时按语言填入匹配示例。多语种混读可手动填入。</p>
 
                 <!-- 文本编辑框 -->
-                <div class="relative">
-                    <textarea id="tts-text" rows="4" 
+                <div>
+                    <textarea id="tts-text" rows="4" aria-label="合成文本"
                               class="w-full bg-slate-950/90 border border-slate-800 focus:border-sky-500 rounded-xl p-3.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none transition resize-y leading-relaxed"
                               placeholder="在此输入需要转换为语音的文字内容...">欢迎使用 Edge-TTS 语音合成控制台！你可以通过左侧列表自由切换全球上百种语言和神经网络音色，并通过上方滑块实时调节语速、音量与音调。</textarea>
-                    <div class="absolute bottom-2.5 right-3 flex items-center gap-3 text-[11px] text-slate-400">
+                    <div class="flex items-center justify-end gap-3 pt-1 text-[11px] text-slate-400">
                         <span id="char-counter">69 字符</span>
                         <button id="btn-clear-text" class="hover:text-rose-400 transition" title="清空文本">清空</button>
                     </div>
                 </div>
 
                 <!-- 操作控制栏与音频可视化播放器 -->
-                <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
-                    <div class="flex items-center gap-2.5">
+                <div class="flex flex-wrap items-stretch justify-between gap-3 pt-1">
+                    <div class="flex flex-wrap items-center gap-2.5">
                         <button id="btn-synthesize" 
                                 class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-semibold text-sm shadow-lg shadow-sky-500/25 transition active:scale-95">
                             <i data-lucide="play" class="w-4 h-4 fill-current" id="play-btn-icon"></i>
@@ -342,13 +361,13 @@
                     </div>
 
                     <!-- 下载音频与下载字幕按钮 -->
-                    <div class="flex items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
                         <button id="btn-download-mp3" disabled
                                 class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium text-sky-300 border border-slate-700 transition">
                             <i data-lucide="download" class="w-3.5 h-3.5"></i>
                             <span>下载 MP3</span>
                         </button>
-                        <button id="btn-download-srt"
+                        <button id="btn-download-vtt" title="优先使用合成时间点，缺少时间点时按文本估算"
                                 class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-xs font-medium text-emerald-300 border border-slate-700 transition">
                             <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
                             <span>导出 WebVTT 字幕</span>
@@ -358,10 +377,10 @@
 
                 <!-- 音频波形与原生 Audio 播放器容器 -->
                 <div class="bg-slate-950/90 border border-slate-800/90 rounded-xl p-3.5 space-y-2.5">
-                    <div class="flex items-center justify-between text-xs">
-                        <div class="flex items-center gap-2">
-                            <span id="status-dot" class="w-2 h-2 rounded-full bg-slate-500"></span>
-                            <span id="status-message" class="text-slate-300 font-medium">就绪：点击「生成并播放语音」开始合成</span>
+                    <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span id="status-dot" aria-hidden="true" class="w-2 h-2 shrink-0 rounded-full bg-slate-500"></span>
+                            <span id="status-message" role="status" class="min-w-0 break-words text-slate-300 font-medium">就绪，点击「生成并播放语音」开始合成</span>
                         </div>
                         <span id="WordBoundary-display" class="text-sky-400 font-mono text-xs truncate max-w-[220px]"></span>
                     </div>
@@ -376,38 +395,13 @@
                 </div>
             </div>
 
-            <!-- 3. 实时生成的 edge-tts CLI 命令、Python 代码与底层 SSML 预览 -->
-            <div class="glass-panel rounded-2xl p-5 space-y-3">
-                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2.5">
-                    <div class="flex items-center gap-1.5">
-                        <button data-tab="cli" class="code-tab px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/30 transition">
-                            💻 CLI 命令行 (edge-tts)
-                        </button>
-                        <button data-tab="python" class="code-tab px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 transition">
-                            🐍 Python 异步代码
-                        </button>
-                        <button data-tab="ssml" class="code-tab px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 transition">
-                            📄 WebSocket SSML 负载
-                        </button>
-                    </div>
-
-                    <button id="btn-copy-code" class="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
-                        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                        <span id="copy-btn-text">复制代码</span>
-                    </button>
-                </div>
-
-                <!-- 代码展示框 -->
-                <pre class="bg-slate-950 border border-slate-800/90 rounded-xl p-3.5 text-xs font-mono text-sky-300 overflow-x-auto leading-relaxed"><code id="code-preview-content"></code></pre>
-            </div>
-
         </section>
     </main>
 
     <!-- 全局非阻塞通知提示框 -->
-    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+    <div id="toast-container" class="fixed bottom-5 left-4 right-4 sm:left-auto sm:right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
 
-    <script>
+    <script id="edge-tts-app">
         /**
          * ============================================================================
          * 1. 内置完整的 edge-tts 多语言与音色精选数据库 (涵盖全球主要语种及所有热门 Neural 语音)
@@ -570,13 +564,10 @@
             rate: 0,     // 百分比 -100 ~ +100
             volume: 0,   // 百分比 -100 ~ +100
             pitch: 0,    // Hz -100 ~ +100
-            codeTab: "cli",
             isSynthesizing: false,
             lastAudioBlobUrl: null,
             lastSynthesis: null,
             synthesisController: null,
-            currentUtterance: null,
-            localPreviewVoices: [],
             subtitlesCueList: [],
             animationId: null
         };
@@ -600,21 +591,29 @@
             });
         }
 
+        function sampleForLocale(locale) {
+            const tag = locale.toLowerCase();
+            if (tag === "zh-cn" || tag === "zh-hans-cn") return "zh";
+            if (["zh-hk", "zh-hant-hk", "yue-hk", "yue-hant-hk"].includes(tag)) return "hk";
+            const language = tag.split("-", 1)[0];
+            if (language === "en" || language === "ja") return language;
+        }
+
         function selectVoice(voice, syncSample = true) {
-            if (state.selectedVoice.ShortName !== voice.ShortName) setLocalPreviewOptions([]);
+            if (state.selectedVoice.ShortName !== voice.ShortName) {
+                stopAllPlayback();
+                clearAudioResult();
+                setSynthesizingUI(false, `Ready to synthesize ${voice.ShortName}`);
+            }
             state.selectedVoice = voice;
             document.getElementById("current-selected-badge").textContent = voice.ShortName;
             if (syncSample) {
-                const sampleKey = voice.ShortName.includes("Multilingual") ? "multi"
-                    : voice.Locale === "zh-CN" ? "zh"
-                    : voice.Locale === "zh-HK" ? "hk"
-                    : voice.Locale.startsWith("en-") ? "en"
-                    : voice.Locale.startsWith("ja-") ? "ja"
-                    : null;
+                const sampleKey = sampleForLocale(voice.Locale);
                 if (sampleKey) setSampleText(sampleKey);
             }
-            renderVoiceList();
-            updateCodePreview();
+            document.querySelectorAll(".voice-card").forEach(card => {
+                card.setAttribute("aria-pressed", String(card.getAttribute("data-voice") === voice.ShortName));
+            });
         }
 
         /**
@@ -641,7 +640,7 @@
             }, 3600);
         }
 
-        // 格式化带正负号的参数字符串 (与 edge-tts CLI 严格一致: +0%, -20%, +15Hz)
+        // Format signed prosody values for SSML.
         function formatSignedParam(val, unit) {
             const num = parseInt(val, 10) || 0;
             return (num >= 0 ? `+${num}` : `${num}`) + unit;
@@ -661,7 +660,7 @@
                 return a.localeCompare(b);
             });
 
-            select.innerHTML = `<option value="ALL">🌍 所有语言与地区 (${sortedLocales.length} 种语言 / ${state.voices.length} 音色)</option>`;
+            select.innerHTML = `<option value="ALL">🌍 所有语言与地区 (${sortedLocales.length} 项 / ${state.voices.length} 音色)</option>`;
             sortedLocales.forEach(loc => {
                 const count = state.voices.filter(v => v.Locale === loc).length;
                 const readable = LOCALE_NAME_MAP[loc] || state.voices.find(v => v.Locale === loc)?.LocaleName || loc;
@@ -678,7 +677,16 @@
             document.getElementById("stat-voices").textContent = state.voices.length;
         }
 
-        // 渲染左侧语音卡片列表
+        function renderFilterSelection() {
+            document.querySelectorAll(".gender-btn").forEach(button => {
+                button.setAttribute("aria-pressed", String(button.getAttribute("data-gender") === state.filterGender));
+            });
+            document.querySelectorAll(".cat-chip").forEach(button => {
+                button.setAttribute("aria-pressed", String(button.getAttribute("data-cat") === state.filterCategory));
+            });
+        }
+
+        // Render the filtered voice catalog.
         function renderVoiceList() {
             const container = document.getElementById("voice-list-container");
             const search = state.filterSearch.trim().toLowerCase();
@@ -716,43 +724,40 @@
                     state.filterLocale = "ALL";
                     state.filterGender = "ALL";
                     state.filterCategory = "ALL";
-                    document.getElementById("voice-search").value = "";
+                    const searchInput = document.getElementById("voice-search");
+                    searchInput.value = "";
                     document.getElementById("locale-filter").value = "ALL";
+                    renderFilterSelection();
                     renderVoiceList();
+                    searchInput.focus();
                 });
                 return;
             }
 
             container.innerHTML = filtered.map(v => {
-                const isSelected = state.selectedVoice && state.selectedVoice.ShortName === v.ShortName;
+                const isSelected = state.selectedVoice.ShortName === v.ShortName;
                 const genderBadge = v.Gender === "Female" 
                     ? `<span class="px-1.5 py-0.5 rounded text-[10px] bg-pink-500/15 text-pink-300 border border-pink-500/25">♀ 女声</span>`
                     : `<span class="px-1.5 py-0.5 rounded text-[10px] bg-blue-500/15 text-blue-300 border border-blue-500/25">♂ 男声</span>`;
                 
                 const tags = (v.Categories || []).slice(0, 3).map(cat => 
-                    `<span class="px-1.5 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400">${cat}</span>`
+                    `<span class="px-1.5 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400">${escapeXml(cat)}</span>`
                 ).join("");
 
                 return `
-                    <div data-voice="${v.ShortName}" class="voice-card cursor-pointer rounded-xl p-3 transition border ${
-                        isSelected 
-                            ? 'bg-sky-500/15 border-sky-500/60 shadow-md shadow-sky-500/5' 
-                            : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900'
-                    }">
-                        <div class="flex items-start justify-between gap-2">
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <span class="text-xs font-semibold text-slate-100">${v.FriendlyName}</span>
-                                </div>
-                                <div class="text-[11px] font-mono text-sky-400 mt-0.5">${v.ShortName}</div>
-                            </div>
+                    <button type="button" data-voice="${escapeXml(v.ShortName)}" aria-pressed="${isSelected}" class="voice-card block w-full cursor-pointer rounded-xl p-3 text-left transition border">
+                        <span class="flex items-start justify-between gap-2">
+                            <span class="min-w-0">
+                                <span class="block break-words text-xs font-semibold text-slate-100">${escapeXml(v.FriendlyName)}</span>
+                                <span class="block break-all text-[11px] font-mono text-sky-400 mt-0.5">${escapeXml(v.ShortName)}</span>
+                            </span>
                             ${genderBadge}
-                        </div>
-                        <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-800/60 text-[10px] text-slate-400">
-                            <span>${LOCALE_NAME_MAP[v.Locale] || v.LocaleName || v.Locale}</span>
-                            <div class="flex items-center gap-1">${tags}</div>
-                        </div>
-                    </div>
+                        </span>
+                        <span class="flex flex-wrap items-center justify-between gap-1 mt-2 pt-2 border-t border-slate-800/60 text-[10px] text-slate-400">
+                            <span>${escapeXml(LOCALE_NAME_MAP[v.Locale] || v.LocaleName || v.Locale)}</span>
+                            <span class="flex flex-wrap items-center gap-1">${tags}</span>
+                        </span>
+                    </button>
                 `;
             }).join("");
 
@@ -768,410 +773,97 @@
             });
         }
 
-        /**
-         * ============================================================================
-         * 4. 生成 edge-tts CLI 命令、Python 异步代码与 SSML 报文
-         * ============================================================================
-         */
-        function buildSSML(text, voiceName, rateStr, volumeStr, pitchStr) {
-            const escapedText = text
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;");
-            return `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'>\n` +
-                   `  <voice name='${voiceName}'>\n` +
-                   `    <prosody pitch='${pitchStr}' rate='${rateStr}' volume='${volumeStr}'>\n` +
-                   `      ${escapedText}\n` +
-                   `    </prosody>\n` +
-                   `  </voice>\n` +
-                   `</speak>`;
-        }
-
-        function updateCodePreview() {
-            const voice = state.selectedVoice ? state.selectedVoice.ShortName : "zh-CN-XiaoxiaoNeural";
-            const rateStr = formatSignedParam(state.rate, "%");
-            const volumeStr = formatSignedParam(state.volume, "%");
-            const pitchStr = formatSignedParam(state.pitch, "Hz");
-            const rawText = document.getElementById("tts-text").value || "Hello World";
-            const includeSubs = document.getElementById("chk-subtitles").checked;
-
-            const codeEl = document.getElementById("code-preview-content");
-
-            if (state.codeTab === "cli") {
-                const shellText = quoteShellArgument(rawText);
-                let cmd = `# POSIX shell (bash/zsh)\nedge-tts \\\n  --voice ${quoteShellArgument(voice)} \\\n  --text ${shellText}`;
-                if (state.rate !== 0) cmd += ` \\\n  --rate="${rateStr}"`;
-                if (state.volume !== 0) cmd += ` \\\n  --volume="${volumeStr}"`;
-                if (state.pitch !== 0) cmd += ` \\\n  --pitch="${pitchStr}"`;
-                cmd += ` \\\n  --write-media output.mp3`;
-                if (includeSubs) cmd += ` \\\n  --write-subtitles output.srt`;
-                cmd += `\n\n# Play directly with edge-playback (POSIX shell):\nedge-playback --voice ${quoteShellArgument(voice)} --rate="${rateStr}" --volume="${volumeStr}" --pitch="${pitchStr}" --text ${shellText}`;
-                codeEl.textContent = cmd;
-            } else if (state.codeTab === "python") {
-                const py = `# Requires edge-tts >= 7.2.0\nimport asyncio\nimport edge_tts\n\nTEXT = ${JSON.stringify(rawText)}\nVOICE = ${JSON.stringify(voice)}\nRATE = "${rateStr}"\nVOLUME = "${volumeStr}"\nPITCH = "${pitchStr}"\nOUTPUT_FILE = "output.mp3"\n${includeSubs ? 'SUBTITLE_FILE = "output.srt"\n' : ''}\nasync def amain() -> None:\n    communicate = edge_tts.Communicate(TEXT, VOICE, rate=RATE, volume=VOLUME, pitch=PITCH, boundary="WordBoundary")\n${includeSubs ? '    submaker = edge_tts.SubMaker()\n    with open(OUTPUT_FILE, "wb") as file:\n        async for chunk in communicate.stream():\n            if chunk["type"] == "audio":\n                file.write(chunk["data"])\n            elif chunk["type"] == "WordBoundary":\n                submaker.feed(chunk)\n    with open(SUBTITLE_FILE, "w", encoding="utf-8") as file:\n        file.write(submaker.get_srt())' : '    await communicate.save(OUTPUT_FILE)'}\n\nif __name__ == "__main__":\n    asyncio.run(amain())`;
-                codeEl.textContent = py;
-            } else {
-                codeEl.textContent = buildSSML(
-                    document.getElementById("tts-text").value || "Hello World",
-                    voice,
-                    rateStr,
-                    volumeStr,
-                    pitchStr
-                );
-            }
-        }
-
-        function quoteShellArgument(value) {
-            return "'" + value.replace(/'/g, "'\"'\"'") + "'";
+        function escapeXml(value) {
+            const entities = { "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&apos;", '"': "&quot;" };
+            return value.replace(/[&<>'"]/g, character => entities[character]);
         }
 
         /**
          * ============================================================================
-         * 5. 云端同步微软 Edge 全量 320+ 语音列表接口 (与 rany2/edge-tts 相同的数据源)
+         * 5. Refresh the Microsoft Edge voice catalog
          * ============================================================================
          */
         async function syncAllCloudVoices() {
+            const button = document.getElementById("btn-sync-voices");
+            if (button.disabled) return;
+            button.disabled = true;
             const icon = document.getElementById("sync-icon");
             const text = document.getElementById("sync-text");
             icon.classList.add("animate-spin");
-            text.textContent = "正在同步...";
+            text.textContent = "Syncing...";
 
-            const EDGE_VOICES_URL = "https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=6A5AA1D4EAFF4E9FB37E23D68491D6F4";
             try {
-                const res = await fetch(EDGE_VOICES_URL);
+                const url = `https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=${EDGE_CLIENT_TOKEN}`;
+                const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
-                if (!Array.isArray(data) || data.length === 0) throw new Error("The Edge voice catalog is empty");
-                const selected = state.selectedVoice;
-                state.voices = data.map(item => ({
+                if (!Array.isArray(data)) throw new Error("Invalid Edge voice catalog");
+                const voices = data.filter(item => item && typeof item.ShortName === "string"
+                    && /^[A-Za-z0-9]+(?:-[A-Za-z0-9]+){2,}$/.test(item.ShortName)
+                    && typeof item.Locale === "string" && /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]+)*$/.test(item.Locale)
+                    && typeof item.FriendlyName === "string").map(item => ({
                     ShortName: item.ShortName,
                     FriendlyName: item.FriendlyName.replace("Microsoft ", "").replace(" Online (Natural)", ""),
                     Locale: item.Locale,
-                    LocaleName: LOCALE_NAME_MAP[item.Locale] || item.Locale,
                     Gender: item.Gender,
-                    Categories: item.VoiceTag?.ContentCategories || ["General"],
-                    Personalities: item.VoiceTag?.VoicePersonalities || []
+                    Categories: Array.isArray(item.VoiceTag?.ContentCategories)
+                        ? item.VoiceTag.ContentCategories.filter(category => typeof category === "string") : ["General"]
                 }));
+                if (!voices.length) throw new Error("The Edge voice catalog is empty");
+                const selected = state.selectedVoice;
+                state.voices = voices;
                 const refreshedVoice = state.voices.find(voice => voice.ShortName === selected.ShortName);
-                const replacement = state.voices.find(voice => voice.Locale === selected.Locale && voice.Gender === selected.Gender)
-                    || state.voices.find(voice => voice.ShortName === BUILTIN_VOICES[0].ShortName) || state.voices[0];
                 populateLocaleDropdown();
-                selectVoice(refreshedVoice || replacement, false);
-                if (!refreshedVoice) showToast(`${selected.ShortName} is no longer listed. Selected ${replacement.ShortName}.`, "warning");
+                selectVoice(refreshedVoice || selected, false);
+                renderVoiceList();
+                if (!refreshedVoice) showToast(`${selected.ShortName} is missing from the refreshed catalog. Your selection is unchanged.`, "warning");
                 showToast(`Edge voice catalog refreshed (${state.voices.length} voices)`, "success");
                 text.textContent = `Synced (${state.voices.length})`;
             } catch (err) {
                 showToast("Could not refresh the Edge voice catalog. The previous list is still available.", "warning");
                 text.textContent = `Voice catalog (${state.voices.length})`;
             } finally {
+                button.disabled = false;
                 icon.classList.remove("animate-spin");
             }
         }
 
         /**
          * ============================================================================
-         * 6. Default Edge TTS with local browser speech fallback
+         * 6. Edge TTS synthesis
          * ============================================================================
          */
-        function generateUUID() {
-            return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-                (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
-            ).replace(/-/g, "");
-        }
-
-        // 计算 rany2/edge-tts DRM 模块中的 Sec-MS-GEC 安全令牌
-        async function generateSecMsGec() {
-            const WIN_EPOCH = 11644473600;
-            let ticks = Math.floor(Date.now() / 1000) + WIN_EPOCH;
-            ticks -= ticks % 300;
-            ticks *= 1e7;
-            const strToHash = `${ticks.toFixed(0)}6A5AA1D4EAFF4E9FB37E23D68491D6F4`;
-            const msgBuffer = new TextEncoder().encode(strToHash);
-            const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            return hashArray.map(b => b.toString(16).padStart(2, "0")).join("").toUpperCase();
-        }
-
-        // Separate connection timeout from receive-idle timeout and release every resource on cancellation.
-        async function synthesizeViaEdgeWebSocket(text, voice, rateStr, volumeStr, pitchStr, signal) {
-            signal?.throwIfAborted();
-            const reqId = generateUUID();
-            const secMsGec = await generateSecMsGec();
-            signal?.throwIfAborted();
-            const wsUrl = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4&Sec-MS-GEC=${secMsGec}&Sec-MS-GEC-Version=2-143.0.3650.75&ConnectionId=${reqId}`;
-
-            return new Promise((resolve, reject) => {
-                const ws = new WebSocket(wsUrl);
-                ws.binaryType = "arraybuffer";
-                const audioChunks = [];
-                const cues = [];
-                let settled = false;
-                let timeout;
-
-                function finish(error, result) {
-                    if (settled) return;
-                    settled = true;
-                    clearTimeout(timeout);
-                    signal?.removeEventListener("abort", onAbort);
-                    ws.onopen = ws.onmessage = ws.onerror = ws.onclose = null;
-                    ws.close();
-                    if (error) reject(error);
-                    else resolve(result);
-                }
-
-                function onAbort() {
-                    finish(new DOMException("Synthesis cancelled", "AbortError"));
-                }
-
-                function armTimeout(delay, message) {
-                    clearTimeout(timeout);
-                    timeout = setTimeout(() => finish(new Error(message)), delay);
-                }
-
-                signal?.addEventListener("abort", onAbort, { once: true });
-                armTimeout(10000, "Edge WebSocket connection timed out");
-
-                ws.onopen = () => {
-                    armTimeout(60000, "Edge WebSocket stopped sending data");
-                    try {
-                        const configPayload = JSON.stringify({
-                            context: {
-                                synthesis: {
-                                    audio: {
-                                        metadataoptions: { sentenceBoundaryEnabled: "false", wordBoundaryEnabled: "true" },
-                                        outputFormat: "audio-24khz-48kbitrate-mono-mp3"
-                                    }
-                                }
-                            }
-                        });
-                        ws.send(`X-Timestamp:${new Date().toString()}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n${configPayload}`);
-                        const ssml = buildSSML(text, voice, rateStr, volumeStr, pitchStr);
-                        ws.send(`X-RequestId:${reqId}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:${new Date().toString()}Z\r\nPath:ssml\r\n\r\n${ssml}`);
-                    } catch (error) {
-                        finish(error);
-                    }
-                };
-
-                ws.onmessage = event => {
-                    if (settled) return;
-                    armTimeout(60000, "Edge WebSocket stopped sending data");
-                    try {
-                        if (typeof event.data === "string") {
-                            const separator = event.data.indexOf("\r\n\r\n");
-                            const headers = separator < 0 ? event.data : event.data.slice(0, separator);
-                            if (headers.split("\r\n").includes("Path:audio.metadata")) {
-                                const meta = JSON.parse(event.data.slice(separator + 4));
-                                meta.Metadata?.forEach(item => {
-                                    if (item.Type === "WordBoundary" && item.Data?.text?.Text) {
-                                        cues.push({ offset: item.Data.Offset / 10000, duration: item.Data.Duration / 10000, text: item.Data.text.Text });
-                                    }
-                                });
-                            } else if (headers.split("\r\n").includes("Path:turn.end")) {
-                                if (audioChunks.length === 0) finish(new Error("No audio frames received"));
-                                else finish(null, { blob: new Blob(audioChunks, { type: "audio/mpeg" }), cues });
-                            }
-                        } else if (event.data instanceof ArrayBuffer) {
-                            if (event.data.byteLength < 2) throw new Error("Invalid Edge audio frame");
-                            const headerLen = new DataView(event.data).getUint16(0);
-                            if (headerLen + 2 > event.data.byteLength) throw new Error("Invalid Edge audio header");
-                            if (event.data.byteLength > headerLen + 2) audioChunks.push(event.data.slice(headerLen + 2));
-                        }
-                    } catch (error) {
-                        finish(error);
-                    }
-                };
-
-                ws.onerror = () => finish(new Error("Edge WebSocket connection failed"));
-                ws.onclose = () => finish(new Error("Edge WebSocket closed before synthesis completed"));
-            });
-        }
-
-        // Names verified in macOS voice metadata and Microsoft's Narrator voice list.
-        // Each entry lists female names first, followed by male names.
-        const SYSTEM_VOICE_NAMES = {
-            "ar-001": ["hoda", "majed"], "ar-sa": ["", "naayf"],
-            "bg-bg": ["daria", "ivan"], "bn-in": ["piya", ""],
-            "ca-es": ["montse herena", ""], "cs-cz": ["zuzana", "jakub"],
-            "da-dk": ["sara helle", ""], "de-at": ["", "michael"],
-            "de-ch": ["", "karsten"], "de-de": ["anna hedda katja", "stefan"],
-            "el-gr": ["melina", "stefanos"], "en-au": ["karen catherine", "james"],
-            "en-ca": ["linda", "richard"], "en-gb": ["hazel susan", "daniel george"],
-            "en-ie": ["moira", "sean"], "en-in": ["tara heera", "rishi aman ravi"],
-            "en-us": ["samantha zira", "fred david mark"], "en-za": ["tessa", ""],
-            "es-es": ["monica helena laura", "pablo"], "es-mx": ["paulina sabina", "raul"],
-            "fi-fi": ["satu heidi", ""], "fr-ca": ["amelie caroline", "claude"],
-            "fr-ch": ["", "guillaume"], "fr-fr": ["hortence hortense julie", "thomas paul"],
-            "he-il": ["carmit", "asaf"], "hi-in": ["lekha kalpana", "hemant"],
-            "hr-hr": ["lana", "matej"], "hu-hu": ["tunde", "szabolcs"],
-            "id-id": ["damayanti", "andika"], "it-it": ["alice elsa", "cosimo"],
-            "ja-jp": ["kyoko ayumi haruka", "ichiro"], "kk-kz": ["aru", ""],
-            "kn-in": ["soumya", ""], "ko-kr": ["yuna heami", ""],
-            "lt-lt": ["ona", ""], "ms-my": ["amira", "rizwan"],
-            "nb-no": ["nora", "jon"], "nl-be": ["ellen", "bart"],
-            "nl-nl": ["", "xander frank"], "pl-pl": ["zosia paulina", "adam"],
-            "pt-br": ["luciana maria", "daniel"], "pt-pt": ["joana helia", ""],
-            "ro-ro": ["ioana", "andrei"], "ru-ru": ["milena irina", "pavel"],
-            "sk-sk": ["laura", "filip"], "sl-si": ["tina", "lado"],
-            "sv-se": ["alva", "bengt"], "ta-in": ["vani", "valluvar"],
-            "te-in": ["geeta", ""], "th-th": ["kanya", "pattara"],
-            "tr-tr": ["yelda", "tolga"], "uk-ua": ["lesya", ""],
-            "vi-vn": ["linh", "an"], "zh-cn": ["tingting huihui yaoyao", "kangkang"],
-            "zh-hk": ["sinji tracy", "danny"], "zh-tw": ["meijia yating hanhan", "zhiwei"]
-        };
-
-        function normalizeSpeechLocale(locale) {
-            const tag = locale.toLowerCase().replace(/_/g, "-");
-            const aliases = { "zh-hans-cn": "zh-cn", "zh-hant-tw": "zh-tw", "zh-hant-hk": "zh-hk", "yue-hk": "zh-hk", "yue-hant-hk": "zh-hk" };
-            return aliases[tag] || tag;
-        }
-
-        function normalizeVoiceName(name) {
-            return name.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase()
-                .replace(/^(?:microsoft|apple)\s+/, "").split(/\s+(?:\(|-\s)/, 1)[0]
-                .replace(/\s+(?:online|desktop)(?:\s.*)?$/, "").replace(/neural$/, "")
-                .replace(/[^\p{L}\p{N}]/gu, "");
-        }
-
-        function getCompatibleBrowserVoices(sysVoices, voiceObj) {
-            const targetLocale = normalizeSpeechLocale(voiceObj.Locale);
-            return sysVoices.filter(voice => voice.localService !== false && normalizeSpeechLocale(voice.lang) === targetLocale);
-        }
-
-        function findBestBrowserVoice(sysVoices, voiceObj) {
-            const targetLocale = normalizeSpeechLocale(voiceObj.Locale);
-            const getCatalogName = voice => normalizeVoiceName(voice.ShortName.split("-").pop());
-            const exactName = getCatalogName(voiceObj);
-            const catalogGenders = new Map();
-            for (const voice of [...state.voices, voiceObj]) {
-                if (normalizeSpeechLocale(voice.Locale) !== targetLocale) continue;
-                const name = getCatalogName(voice).replace(/multilingual$/, "");
-                const genders = catalogGenders.get(name) || new Set();
-                genders.add(voice.Gender);
-                catalogGenders.set(name, genders);
-            }
-
-            const [femaleNames, maleNames] = SYSTEM_VOICE_NAMES[targetLocale] || ["", ""];
-            const matches = getCompatibleBrowserVoices(sysVoices, voiceObj).filter(voice => {
-                const name = normalizeVoiceName(voice.name).replace(/multilingual$/, "");
-                const genders = catalogGenders.get(name);
-                const female = /\b(female|woman|girl)\b|\u5973/i.test(voice.name) || femaleNames.split(" ").includes(name) || genders?.has("Female");
-                const male = /\b(male|man|boy)\b|\u7537/i.test(voice.name) || maleNames.split(" ").includes(name) || genders?.has("Male");
-                return voiceObj.Gender === "Female" ? female && !male : male && !female;
-            });
-            return matches.find(voice => normalizeVoiceName(voice.name) === exactName)
-                || matches.find(voice => voice.default) || matches[0] || null;
-        }
-
-        function setLocalPreviewOptions(voices) {
-            state.localPreviewVoices = voices;
-            const panel = document.getElementById("local-preview-options");
-            const select = document.getElementById("local-preview-voice");
-            select.innerHTML = "";
-            if (voices.length === 0) {
-                panel.classList.add("hidden");
-                return;
-            }
-            voices.forEach((voice, index) => {
-                const option = document.createElement("option");
-                option.value = String(index);
-                option.textContent = `${voice.name} (${voice.lang})`;
-                select.appendChild(option);
-            });
-            select.value = "0";
-            panel.classList.remove("hidden");
-        }
-
-        async function synthesizeViaBrowserSpeech(synthesis, signal, previewVoice) {
-            const { text, voice: voiceObj, rate, volume, pitch } = synthesis;
-            signal?.throwIfAborted();
-            if (!("speechSynthesis" in window)) throw new Error("This browser does not support local speech synthesis");
-            const speech = window.speechSynthesis;
-            let sysVoices = speech.getVoices();
-            if (sysVoices.length === 0) {
-                sysVoices = await new Promise((resolve, reject) => {
-                    const finish = () => {
-                        clearTimeout(timeout);
-                        speech.removeEventListener("voiceschanged", onVoices);
-                        signal?.removeEventListener("abort", onAbort);
-                    };
-                    const onVoices = () => {
-                        const voices = speech.getVoices();
-                        if (voices.length === 0) return;
-                        finish();
-                        resolve(voices);
-                    };
-                    const onAbort = () => {
-                        finish();
-                        reject(new DOMException("Synthesis cancelled", "AbortError"));
-                    };
-                    const timeout = setTimeout(() => { finish(); resolve(speech.getVoices()); }, 1500);
-                    speech.addEventListener("voiceschanged", onVoices);
-                    signal?.addEventListener("abort", onAbort, { once: true });
+        const EDGE_CLIENT_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
+        async function requestSynthesis(text, voice, rate, volume, pitch, signal) {
+            const endpoint = new URL("../api/edge-tts", window.location.href);
+            const localPageMessage = "Open this tool through the local Vite server to synthesize audio.";
+            if (endpoint.protocol === "file:") throw new Error(localPageMessage);
+            let response;
+            try {
+                response = await fetch(endpoint, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text, voice, rate, volume, pitch }),
+                    signal
                 });
+            } catch (error) {
+                if (signal.aborted) throw error;
+                throw new Error("The synthesis service could not be reached.");
             }
-            signal?.throwIfAborted();
-            const compatible = getCompatibleBrowserVoices(sysVoices, voiceObj);
-            const matchedVoice = previewVoice
-                ? compatible.find(voice => voice.voiceURI === previewVoice.voiceURI && voice.name === previewVoice.name && voice.lang === previewVoice.lang)
-                : findBestBrowserVoice(sysVoices, voiceObj);
-            if (!matchedVoice) {
-                if (compatible.length) {
-                    if (state.selectedVoice.ShortName === voiceObj.ShortName) setLocalPreviewOptions(compatible);
-                    if (previewVoice) throw new Error("The selected local voice is no longer available. Choose another preview voice.");
-                    throw new Error(`No verified local ${voiceObj.Gender.toLowerCase()} match for ${voiceObj.Locale}. Choose a local preview voice or use the CLI to synthesize ${voiceObj.ShortName}.`);
+            const result = await response.json().catch(() => null);
+            if (!response.ok) {
+                if (!result && [404, 405].includes(response.status)) {
+                    throw new Error(localPageMessage);
                 }
-                throw new Error(`No local voice is available for ${voiceObj.Locale}. Use the CLI to synthesize ${voiceObj.ShortName}.`);
+                throw new Error(result?.error || "The synthesis request failed.");
             }
-
-            const voiceLabel = `${matchedVoice.name} (${matchedVoice.lang})`;
-            document.getElementById("engine-status-tag").textContent = "Local preview";
-            setSynthesizingUI(true, `Local preview: ${voiceLabel} for ${voiceObj.ShortName}`);
-            showToast(`Using ${voiceLabel} for local preview. MP3 download is unavailable.`, "info");
-
-            return new Promise((resolve, reject) => {
-                speech.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = matchedVoice.lang;
-                utterance.voice = matchedVoice;
-                utterance.rate = Math.max(0.25, Math.min(2.0, 1 + rate / 100));
-                utterance.volume = Math.max(0, Math.min(1.0, 1 + volume / 100));
-                utterance.pitch = Math.max(0.2, Math.min(2.0, 1 + pitch / 120));
-                state.lastSynthesis = synthesis;
-                state.subtitlesCueList = generateEstimatedSubtitles(text, rate);
-                state.currentUtterance = utterance;
-
-                const finish = error => {
-                    signal?.removeEventListener("abort", onAbort);
-                    utterance.onend = utterance.onerror = utterance.onboundary = null;
-                    if (state.currentUtterance === utterance) state.currentUtterance = null;
-                    if (error) reject(error);
-                    else resolve();
-                };
-                const onAbort = () => {
-                    finish(new DOMException("Synthesis cancelled", "AbortError"));
-                    speech.cancel();
-                };
-                signal?.addEventListener("abort", onAbort, { once: true });
-
-                utterance.onboundary = (event) => {
-                    if (!signal?.aborted && event.name === "word") {
-                        const word = text.slice(event.charIndex, event.charIndex + (event.charLength || 6));
-                        document.getElementById("WordBoundary-display").textContent = `Speech: ${word}`;
-                    }
-                };
-
-                utterance.onend = () => {
-                    if (signal?.aborted) return;
-                    stopVisualizer();
-                    setSynthesizingUI(false, `Local preview complete: ${voiceLabel}`);
-                    finish();
-                };
-
-                utterance.onerror = event => finish(new Error(`Browser speech failed: ${event.error || "unknown error"}`));
-
-                startVisualizer();
-                try { speech.speak(utterance); } catch (error) { finish(error); }
-            });
+            if (result?.voice !== voice || typeof result.audio !== "string" || !result.audio || !Array.isArray(result.cues)) {
+                throw new Error("The synthesis service returned an invalid result for the selected voice.");
+            }
+            const binary = atob(result.audio);
+            const audio = new Uint8Array(binary.length);
+            for (let index = 0; index < binary.length; index++) audio[index] = binary.charCodeAt(index);
+            return { blob: new Blob([audio], { type: "audio/mpeg" }), cues: result.cues };
         }
 
         // Estimate subtitle timing when no real word boundaries are available.
@@ -1184,6 +876,7 @@
                 }
                 return acc;
             }, []);
+            if (!clauses.length && text.trim()) clauses.push(text.trim());
 
             let currentMs = 0;
             return clauses.map(clause => {
@@ -1207,17 +900,16 @@
             return `${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}.${String(millis).padStart(3, "0")}`;
         }
 
-        // Only the current request may publish results or start a fallback engine.
-        async function handleSynthesizeAndPlay(previewVoice = null) {
+        // Only the current request may publish results.
+        async function handleSynthesizeAndPlay() {
             const text = document.getElementById("tts-text").value.trim();
             if (!text) {
-                showToast("请输入要合成语音的文字内容！", "warning");
+                showToast("Enter text to synthesize.", "warning");
                 return;
             }
 
             stopAllPlayback();
             clearAudioResult();
-            if (!previewVoice) setLocalPreviewOptions([]);
             const controller = new AbortController();
             const { signal } = controller;
             state.synthesisController = controller;
@@ -1228,33 +920,18 @@
             const volumeStr = formatSignedParam(volume, "%");
             const pitchStr = formatSignedParam(pitch, "Hz");
 
-            let edgeError = null;
+            setSynthesizingUI(true, `Requesting Edge TTS [${voice.ShortName}]...`);
             try {
-                if (!previewVoice) {
-                    document.getElementById("engine-status-tag").textContent = "Edge TTS";
-                    setSynthesizingUI(true, `Requesting Edge TTS [${voice.ShortName}]...`);
-                    let result;
-                    try {
-                        result = await synthesizeViaEdgeWebSocket(text, voice.ShortName, rateStr, volumeStr, pitchStr, signal);
-                    } catch (error) {
-                        edgeError = error;
-                    }
-                    if (signal.aborted || state.synthesisController !== controller) return;
-                    if (result) {
-                        state.subtitlesCueList = result.cues.length > 0 ? result.cues : generateEstimatedSubtitles(text, rate);
-                        synthesis.estimated = result.cues.length === 0;
-                        await playAudioBlob(result.blob, `Edge TTS ready [${voice.FriendlyName}]`, synthesis, signal);
-                        return;
-                    }
-                    document.getElementById("engine-status-tag").textContent = "Edge unavailable";
-                }
-                setSynthesizingUI(true, `Checking local voices for ${voice.Locale}...`);
-                await synthesizeViaBrowserSpeech(synthesis, signal, previewVoice);
+                const { blob, cues } = await requestSynthesis(text, voice.ShortName, rateStr, volumeStr, pitchStr, signal);
+                if (signal.aborted || state.synthesisController !== controller) return;
+                synthesis.estimated = cues.length === 0;
+                state.subtitlesCueList = synthesis.estimated ? generateEstimatedSubtitles(text, rate) : cues;
+                await playAudioBlob(blob, `Edge TTS ready [${voice.ShortName}]`, synthesis, signal);
             } catch (error) {
                 if (signal.aborted || state.synthesisController !== controller) return;
                 stopVisualizer();
-                const message = edgeError ? `${edgeError.message}. ${error.message}` : error.message;
-                setSynthesizingUI(false, `Synthesis failed: ${message}`);
+                const message = `Synthesis failed for ${voice.ShortName}: ${error.message}`;
+                setSynthesizingUI(false, message);
                 showToast(message, "error");
             }
         }
@@ -1284,7 +961,7 @@
                 setSynthesizingUI(true, statusMsg);
             };
             audioEl.onpause = () => {
-                if (!isCurrentMedia()) return;
+                if (!isCurrentMedia() || !state.isSynthesizing) return;
                 stopVisualizer();
                 setSynthesizingUI(false, "Audio paused");
             };
@@ -1335,14 +1012,11 @@
             const controller = state.synthesisController;
             state.synthesisController = null;
             controller?.abort();
-            if ("speechSynthesis" in window) {
-                window.speechSynthesis.cancel();
-            }
             const audioEl = document.getElementById("audio-player");
             audioEl.pause();
             audioEl.currentTime = 0;
             stopVisualizer();
-            setSynthesizingUI(false, "已停止播放");
+            setSynthesizingUI(false, "Playback stopped");
         }
 
         function setSynthesizingUI(active, message) {
@@ -1356,10 +1030,10 @@
             stopBtn.disabled = !active;
 
             if (active) {
-                dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-ping";
+                dot.className = "w-2 h-2 shrink-0 rounded-full bg-emerald-400 animate-ping";
                 playBtnText.textContent = "重新合成播放";
             } else {
-                dot.className = "w-2 h-2 rounded-full bg-sky-400";
+                dot.className = "w-2 h-2 shrink-0 rounded-full bg-sky-400";
                 playBtnText.textContent = "生成并播放语音";
             }
         }
@@ -1459,18 +1133,13 @@
          * ============================================================================
          */
         window.addEventListener("DOMContentLoaded", () => {
-            lucide.createIcons();
+            window.lucide?.createIcons();
             populateLocaleDropdown();
             renderVoiceList();
-            updateCodePreview();
             renderSampleSelection();
+            renderFilterSelection();
             document.getElementById("char-counter").textContent = `${document.getElementById("tts-text").value.length} characters`;
             drawIdleWaveform();
-
-            // 预加载浏览器本地语音列表
-            if ("speechSynthesis" in window) {
-                window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
-            }
 
             window.addEventListener("resize", () => {
                 if (!visualizerActive) drawIdleWaveform();
@@ -1490,11 +1159,8 @@
             // 2. 性别切换按钮
             document.querySelectorAll(".gender-btn").forEach(btn => {
                 btn.addEventListener("click", () => {
-                    document.querySelectorAll(".gender-btn").forEach(b => {
-                        b.className = "gender-btn flex-1 text-xs py-1 rounded-lg text-slate-400 hover:text-slate-200 transition";
-                    });
-                    btn.className = "gender-btn flex-1 text-xs py-1 rounded-lg bg-sky-500 text-white font-medium transition";
                     state.filterGender = btn.getAttribute("data-gender");
+                    renderFilterSelection();
                     renderVoiceList();
                 });
             });
@@ -1502,11 +1168,8 @@
             // 3. 分类特性标签筛选
             document.querySelectorAll(".cat-chip").forEach(chip => {
                 chip.addEventListener("click", () => {
-                    document.querySelectorAll(".cat-chip").forEach(c => {
-                        c.className = "cat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200";
-                    });
-                    chip.className = "cat-chip shrink-0 px-2.5 py-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30";
                     state.filterCategory = chip.getAttribute("data-cat");
+                    renderFilterSelection();
                     renderVoiceList();
                 });
             });
@@ -1519,19 +1182,16 @@
             rateInput.addEventListener("input", (e) => {
                 state.rate = parseInt(e.target.value, 10);
                 document.getElementById("val-rate").textContent = formatSignedParam(state.rate, "%");
-                updateCodePreview();
             });
 
             volInput.addEventListener("input", (e) => {
                 state.volume = parseInt(e.target.value, 10);
                 document.getElementById("val-volume").textContent = formatSignedParam(state.volume, "%");
-                updateCodePreview();
             });
 
             pitchInput.addEventListener("input", (e) => {
                 state.pitch = parseInt(e.target.value, 10);
                 document.getElementById("val-pitch").textContent = formatSignedParam(state.pitch, "Hz");
-                updateCodePreview();
             });
 
             document.getElementById("btn-reset-params").addEventListener("click", () => {
@@ -1544,12 +1204,8 @@
                 document.getElementById("val-rate").textContent = "+0%";
                 document.getElementById("val-volume").textContent = "+0%";
                 document.getElementById("val-pitch").textContent = "+0Hz";
-                updateCodePreview();
                 showToast("已重置语速、音量和音调为默认值", "info");
             });
-
-            // Subtitle option
-            document.getElementById("chk-subtitles").addEventListener("change", updateCodePreview);
 
             // 6. 示例文本快捷填入与字数统计
             const textArea = document.getElementById("tts-text");
@@ -1557,7 +1213,6 @@
                 document.getElementById("char-counter").textContent = `${textArea.value.length} characters`;
                 state.selectedSample = null;
                 renderSampleSelection();
-                updateCodePreview();
             });
 
             document.getElementById("btn-clear-text").addEventListener("click", () => {
@@ -1565,36 +1220,17 @@
                 document.getElementById("char-counter").textContent = "0 characters";
                 state.selectedSample = null;
                 renderSampleSelection();
-                updateCodePreview();
             });
 
             document.querySelectorAll(".sample-btn").forEach(btn => {
                 btn.addEventListener("click", () => {
                     const key = btn.getAttribute("data-sample");
-                    if (SAMPLE_TEXTS[key]) {
-                        setSampleText(key);
-                        // Keep manual sample selection and voice selection in sync.
-                        const targetPrefix = key === "zh" ? "zh-CN-Xiaoxiao" 
-                                           : key === "hk" ? "zh-HK-HiuGaai" 
-                                           : key === "en" ? "en-US-Aria" 
-                                           : key === "ja" ? "ja-JP-Nanami" 
-                                           : "Multilingual";
-                        const matchingVoice = state.voices.find(v => v.ShortName.includes(targetPrefix));
-                        if (matchingVoice) {
-                            selectVoice(matchingVoice, false);
-                        }
-                        updateCodePreview();
-                    }
+                    setSampleText(key);
                 });
             });
 
             // 7. 合成、停止、下载 MP3 与导出 VTT 字幕
-            document.getElementById("btn-synthesize").addEventListener("click", () => handleSynthesizeAndPlay());
-            document.getElementById("btn-preview-local").addEventListener("click", () => {
-                const index = document.getElementById("local-preview-voice").value;
-                const previewVoice = state.localPreviewVoices[index];
-                if (previewVoice) handleSynthesizeAndPlay(previewVoice);
-            });
+            document.getElementById("btn-synthesize").addEventListener("click", handleSynthesizeAndPlay);
             document.getElementById("btn-stop").addEventListener("click", stopAllPlayback);
 
             document.getElementById("btn-download-mp3").addEventListener("click", () => {
@@ -1606,7 +1242,7 @@
                 showToast("Audio download started", "success");
             });
 
-            document.getElementById("btn-download-srt").addEventListener("click", () => {
+            document.getElementById("btn-download-vtt").addEventListener("click", () => {
                 const synthesis = state.lastSynthesis;
                 const text = synthesis ? synthesis.text : textArea.value.trim();
                 if (!text) {
@@ -1620,8 +1256,9 @@
                 let vttContent = "WEBVTT\n\n";
                 cues.forEach((c, idx) => {
                     const start = formatVttTime(c.offset);
-                    const end = formatVttTime(c.offset + c.duration);
-                    vttContent += `${idx + 1}\n${start} --> ${end}\n${c.text}\n\n`;
+                    const end = formatVttTime(c.offset + Math.max(1, c.duration));
+                    const cueText = c.text.replace(/[\r\n]+/g, " ").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                    vttContent += `${idx + 1}\n${start} --> ${end}\n${cueText}\n\n`;
                 });
 
                 const blob = new Blob([vttContent], { type: "text/vtt;charset=utf-8" });
@@ -1632,33 +1269,6 @@
                 a.click();
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
                 showToast(synthesis && !synthesis.estimated ? "WebVTT subtitles exported" : "WebVTT exported with estimated timing; timing may differ from the audio", "success");
-            });
-
-            // 8. CLI / Python / SSML 代码标签切换与复制
-            document.querySelectorAll(".code-tab").forEach(tab => {
-                tab.addEventListener("click", () => {
-                    document.querySelectorAll(".code-tab").forEach(t => {
-                        t.className = "code-tab px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 transition";
-                    });
-                    tab.className = "code-tab px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/30 transition";
-                    state.codeTab = tab.getAttribute("data-tab");
-                    updateCodePreview();
-                });
-            });
-
-            document.getElementById("btn-copy-code").addEventListener("click", () => {
-                const codeText = document.getElementById("code-preview-content").textContent;
-                const tempInput = document.createElement("textarea");
-                tempInput.value = codeText;
-                document.body.appendChild(tempInput);
-                tempInput.select();
-                document.execCommand("copy");
-                document.body.removeChild(tempInput);
-
-                const copyBtnText = document.getElementById("copy-btn-text");
-                copyBtnText.textContent = "已复制！";
-                showToast("代码已复制到剪贴板", "success");
-                setTimeout(() => { copyBtnText.textContent = "复制代码"; }, 2000);
             });
 
             // 9. 手动或自动同步云端完整语音列表

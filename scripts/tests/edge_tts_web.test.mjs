@@ -1,23 +1,15 @@
 import assert from "node:assert/strict";
-import { webcrypto } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { spawnSync } from "node:child_process";
 import { test } from "vitest";
 import vm from "node:vm";
 
 const html = readFileSync(new URL("../../edge_tts/index.html", import.meta.url), "utf8");
-const source = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].at(-1)[1];
-const flush = async () => { for (let index = 0; index < 12; index++) await Promise.resolve(); };
-const hasPython = spawnSync("python3", ["--version"], { stdio: "ignore" }).status === 0;
+const source = html.match(/<script id="edge-tts-app">([\s\S]*?)<\/script>/)[1];
 
-function createApp({ voices = [], blockPlayback = false } = {}) {
+function createApp({ blockPlayback = false, pageUrl = "http://localhost:5173/edge_tts/" } = {}) {
     const elements = new Map();
     const groups = new Map();
     const downloads = [];
-    const timers = new Map();
-    const sockets = [];
-    let timerId = 0;
-    let now = 0;
     let initialize;
 
     function element(tag = "div") {
@@ -29,7 +21,7 @@ function createApp({ voices = [], blockPlayback = false } = {}) {
             getAttribute(name) { return this.attributes[name]; },
             removeAttribute(name) { delete this.attributes[name]; if (name === "src") this.src = ""; },
             appendChild(child) { this.children.push(child); },
-            remove() {}, select() {},
+            remove() {}, select() {}, focus() {},
             querySelector(selector) { if (selector === "span") return this.label ??= element("span"); },
             querySelectorAll(selector) {
                 if (selector !== ".voice-card") return [];
@@ -77,28 +69,10 @@ function createApp({ voices = [], blockPlayback = false } = {}) {
     }
     elements.get("tts-text").value = html.match(/<textarea[^>]*id="tts-text"[^>]*>([\s\S]*?)<\/textarea>/)[1];
     elements.get("locale-filter").value = "ALL";
-    const speech = {
-        voices, spoken: [], handlers: new Map(),
-        getVoices() { return this.voices; },
-        addEventListener(name, handler) { this.handlers.set(name, handler); },
-        removeEventListener(name) { this.handlers.delete(name); },
-        cancel() { this.spoken.at(-1)?.onerror?.({ error: "canceled" }); },
-        speak(utterance) { this.spoken.push(utterance); }
-    };
-    class FakeWebSocket {
-        constructor(url) { this.url = url; this.sent = []; this.closed = false; sockets.push(this); }
-        send(data) { this.sent.push(data); }
-        close() { this.closed = true; }
-        open() { this.onopen?.(); }
-        message(data) { this.onmessage?.({ data }); }
-    }
     const context = vm.createContext({
-        Blob, URL, AbortController, DOMException, ArrayBuffer, DataView, Uint8Array, TextEncoder, crypto: webcrypto,
-        WebSocket: FakeWebSocket, SpeechSynthesisUtterance: class { constructor(text) { this.text = text; } },
-        setTimeout(callback, delay) { timers.set(++timerId, { callback, at: now + delay }); return timerId; },
-        clearTimeout(id) { timers.delete(id); }, requestAnimationFrame() { return 1; }, cancelAnimationFrame() {},
-        lucide: { createIcons() {} },
-        window: { speechSynthesis: speech, addEventListener(name, handler) { if (name === "DOMContentLoaded") initialize = handler; } },
+        Blob, URL, AbortController, AbortSignal, DOMException, Uint8Array, atob,
+        setTimeout() {}, requestAnimationFrame() { return 1; }, cancelAnimationFrame() {},
+        window: { location: new URL(pageUrl), addEventListener(name, handler) { if (name === "DOMContentLoaded") initialize = handler; } },
         document: {
             body: element("body"), createElement: element,
             getElementById(id) { assert.ok(elements.has(id), `Unknown element: ${id}`); return elements.get(id); },
@@ -108,37 +82,30 @@ function createApp({ voices = [], blockPlayback = false } = {}) {
     vm.runInContext(source, context);
     const run = code => vm.runInContext(code, context);
     const syncVoices = run("syncAllCloudVoices");
-    run('syncAllCloudVoices = async () => {}; generateSecMsGec = async () => "test_token";');
+    run("syncAllCloudVoices = async () => {};");
     initialize();
     return {
-        context, elements, speech, sockets, downloads, groups, run, syncVoices,
-        advance(milliseconds) {
-            const target = now + milliseconds;
-            while (true) {
-                const next = [...timers.entries()].filter(([, timer]) => timer.at <= target).sort((a, b) => a[1].at - b[1].at)[0];
-                if (!next) break;
-                now = next[1].at;
-                timers.delete(next[0]);
-                next[1].callback();
-            }
-            now = target;
-        },
+        context, elements, downloads, groups, run, syncVoices,
         cleanup() { run("stopAllPlayback(); clearAudioResult()"); }
     };
 }
 
-function finishSocket(socket) {
-    socket.message(new Uint8Array([0, 0, 1, 2, 3]).buffer);
-    socket.message("Path:turn.end\r\n\r\n");
+function audioResponse(voice) {
+    return { ok: true, json: async () => ({ voice, audio: "YXVkaW8=", cues: [] }) };
 }
 
 test("sample selection preserves unmatched languages and manual text", () => {
     const app = createApp();
-    for (const [name, key] of [["zh-HK-HiuGaaiNeural", "hk"], ["en-US-AriaNeural", "en"], ["ja-JP-NanamiNeural", "ja"], ["zh-CN-XiaoxiaoNeural", "zh"], ["en-US-AvaMultilingualNeural", "multi"]]) {
+    for (const [name, key] of [["zh-HK-HiuGaaiNeural", "hk"], ["en-US-AriaNeural", "en"], ["ja-JP-NanamiNeural", "ja"], ["zh-CN-XiaoxiaoNeural", "zh"], ["en-US-AvaMultilingualNeural", "en"], ["en-GB-SoniaNeural", "en"]]) {
         app.run(`selectVoice(state.voices.find(voice => voice.ShortName === ${JSON.stringify(name)}))`);
         assert.equal(app.run("state.selectedSample"), key);
         assert.equal(app.elements.get("tts-text").value, app.run(`SAMPLE_TEXTS[${JSON.stringify(key)}]`));
     }
+    const multiSample = app.groups.get(".sample-btn").find(button => button.getAttribute("data-sample") === "multi");
+    multiSample.click();
+    assert.equal(app.run("state.selectedSample"), "multi");
+    assert.equal(app.run("state.selectedVoice.ShortName"), "en-GB-SoniaNeural");
+    assert.equal(app.elements.get("tts-text").value, app.run("SAMPLE_TEXTS.multi"));
     app.elements.get("tts-text").value = "Keep this text";
     app.elements.get("tts-text").handlers.input();
     app.run('selectVoice({ ShortName: "fr-FR-DeniseNeural", Locale: "fr-FR" })');
@@ -147,17 +114,19 @@ test("sample selection preserves unmatched languages and manual text", () => {
     app.cleanup();
 });
 
-test("stopping an in-flight socket prevents playback and local fallback", async () => {
+test("stopping aborts the HTTP request and prevents late playback", async () => {
     const app = createApp();
+    let signal;
+    let reply;
+    app.context.fetch = (_, options) => new Promise(resolve => {
+        signal = options.signal;
+        reply = resolve;
+    });
     const pending = app.run("handleSynthesizeAndPlay()");
-    await flush();
-    const socket = app.sockets[0];
-    socket.open();
     app.run("stopAllPlayback()");
-    finishSocket(socket);
+    reply(audioResponse("zh-CN-XiaoxiaoNeural"));
     await pending;
-    assert.equal(socket.closed, true);
-    assert.equal(app.speech.spoken.length, 0);
+    assert.equal(signal.aborted, true);
     assert.equal(app.run("state.lastAudioBlobUrl"), null);
     assert.equal(app.run("state.isSynthesizing"), false);
     app.cleanup();
@@ -165,7 +134,7 @@ test("stopping an in-flight socket prevents playback and local fallback", async 
 
 test("new requests supersede late results and retain their parameter snapshot", async () => {
     const app = createApp();
-    app.run("var pendingResults = []; synthesizeViaEdgeWebSocket = () => new Promise(resolve => pendingResults.push(resolve));");
+    app.run("var pendingResults = []; requestSynthesis = () => new Promise(resolve => pendingResults.push(resolve));");
     const first = app.run("handleSynthesizeAndPlay()");
     app.elements.get("tts-text").value = "New text";
     app.run("state.rate = 25");
@@ -181,111 +150,21 @@ test("new requests supersede late results and retain their parameter snapshot", 
     app.cleanup();
 });
 
-test("streaming past 6.5 seconds succeeds and idle timeout resets on data", async () => {
+test("a synthesis service error is shown for the selected voice without fallback", async () => {
     const app = createApp();
-    const pending = app.run('synthesizeViaEdgeWebSocket("sample", "en-US-AriaNeural", "+0%", "+0%", "+0Hz")');
-    await flush();
-    const socket = app.sockets[0];
-    socket.open();
-    app.advance(6501);
-    assert.equal(socket.closed, false);
-    app.advance(50000);
-    socket.message(new Uint8Array([0, 0, 4]).buffer);
-    app.advance(50000);
-    assert.equal(socket.closed, false);
-    finishSocket(socket);
-    assert.equal((await pending).blob.type, "audio/mpeg");
-    assert.match(new URL(socket.url).searchParams.get("ConnectionId"), /^[a-f0-9]{32}$/);
-    app.cleanup();
-});
-
-test("connection, idle, premature-close, and invalid-frame failures settle promptly", async () => {
-    for (const failure of ["connection", "idle", "close", "frame"]) {
-        const app = createApp();
-        const pending = app.run('synthesizeViaEdgeWebSocket("sample", "voice", "+0%", "+0%", "+0Hz")');
-        const rejected = assert.rejects(pending);
-        await flush();
-        const socket = app.sockets[0];
-        if (failure === "connection") app.advance(10000);
-        else {
-            socket.open();
-            if (failure === "idle") app.advance(60000);
-            if (failure === "close") socket.onclose();
-            if (failure === "frame") socket.message(new ArrayBuffer(1));
-        }
-        await rejected;
-        assert.equal(socket.closed, true);
-        app.cleanup();
-    }
-});
-
-test("voice matching distinguishes gender words and does not substitute Mandarin for dialects", () => {
-    const app = createApp();
-    for (const name of ["System Female", "System Woman", "Microsoft Aria Online (Natural)"]) {
-        app.context.candidates = [{ name: "System Male", lang: "en-US" }, { name, lang: "en-US" }];
-        assert.equal(app.run('findBestBrowserVoice(candidates, { Locale: "en-US", ShortName: "en-US-JennyNeural", Gender: "Female" }).name'), name);
-    }
-    app.context.candidates = [{ name: "System Female", lang: "zh-CN" }];
-    assert.equal(app.run('findBestBrowserVoice(candidates, { Locale: "zh-CN-liaoning", ShortName: "zh-CN-liaoning-XiaobeiNeural", Gender: "Female" })'), null);
-    assert.equal(app.run('findBestBrowserVoice(candidates, { Locale: "zh-HK", ShortName: "zh-HK-HiuGaaiNeural", Gender: "Female" })'), null);
-    app.context.candidates = [{ name: "Microsoft Yunxi Online (Natural)", lang: "zh-CN" }];
-    assert.equal(app.run('findBestBrowserVoice(candidates, { Locale: "zh-CN-sichuan", ShortName: "zh-CN-sichuan-YunxiNeural", Gender: "Male" })'), null);
-    app.context.candidates = [{ name: "System Male", lang: "en-US" }];
-    assert.equal(app.run('findBestBrowserVoice(candidates, { Locale: "en-US", ShortName: "en-US-JennyNeural", Gender: "Female" })'), null);
-    app.context.candidates = [{ name: "Bulgarian Voice", lang: "en-US" }];
-    assert.equal(app.run('findBestBrowserVoice(candidates, { Locale: "en-US", ShortName: "en-US-JennyNeural", Gender: "Female" })'), null);
-    app.cleanup();
-});
-
-test("installed system voices support Ava, other genders, and regional aliases", () => {
-    const app = createApp();
-    for (const [voice, name, lang] of [
-        ["en-US-AvaNeural", "Samantha", "en-US"],
-        ["en-US-EmmaNeural", "Microsoft Zira Desktop - English (United States)", "en_US"],
-        ["en-US-GuyNeural", "Microsoft David - English (United States)", "en-US"],
-        ["ja-JP-NanamiNeural", "Kyoko", "ja-JP"],
-        ["zh-CN-XiaoxiaoNeural", "Tingting", "zh-Hans-CN"],
-        ["zh-HK-HiuGaaiNeural", "Sin-Ji", "yue-Hant-HK"]
-    ]) {
-        app.context.candidates = [{ name, lang, localService: true }];
-        const target = app.run(`state.voices.find(voice => voice.ShortName === ${JSON.stringify(voice)})`);
-        app.context.target = target;
-        assert.equal(app.run("findBestBrowserVoice(candidates, target).name"), name);
-        app.context.candidates[0].localService = false;
-        assert.equal(app.run("findBestBrowserVoice(candidates, target)"), null);
-    }
-    app.context.candidates = [
-        { name: "Microsoft Ava Online (Natural)", lang: "en-US", default: true },
-        { name: "Microsoft Ava Multilingual Online (Natural)", lang: "en-US" }
-    ];
-    assert.match(app.run('findBestBrowserVoice(candidates, state.voices.find(voice => voice.ShortName === "en-US-AvaMultilingualNeural")).name'), /Multilingual/);
-    app.cleanup();
-});
-
-test("unclassified voices require explicit same-locale preview selection", async () => {
-    const app = createApp({ voices: [
-        { name: "Voice without metadata", lang: "en-US", voiceURI: "voice-1" },
-        { name: "Different region", lang: "en-GB", voiceURI: "voice-2" },
-        { name: "Remote voice", lang: "en-US", voiceURI: "voice-3", localService: false }
-    ] });
-    app.run('selectVoice(state.voices.find(voice => voice.ShortName === "en-US-AvaNeural")); synthesizeViaEdgeWebSocket = async () => { throw new Error("Edge connection failed"); };');
+    let systemVoiceRequested = false;
+    app.context.window.speechSynthesis = { speak() { systemVoiceRequested = true; } };
+    app.run('selectVoice(state.voices.find(voice => voice.ShortName === "en-US-AvaMultilingualNeural"));');
+    app.context.fetch = async () => ({ ok: false, status: 502, json: async () => ({ error: "Edge connection failed" }) });
     await app.run("handleSynthesizeAndPlay()");
-    assert.equal(app.speech.spoken.length, 0);
-    assert.equal(app.run("state.localPreviewVoices.length"), 1);
-    assert.match(app.elements.get("status-message").textContent, /Edge connection failed.*No verified local female match/);
-    app.speech.voices = app.speech.voices.map(voice => ({ ...voice }));
-    app.elements.get("btn-preview-local").click();
-    await flush();
-    assert.equal(app.speech.spoken[0].voice.voiceURI, "voice-1");
-    assert.match(app.elements.get("status-message").textContent, /Local preview: Voice without metadata/);
+    assert.equal(systemVoiceRequested, false);
+    assert.equal(app.run("state.selectedVoice.ShortName"), "en-US-AvaMultilingualNeural");
+    assert.match(app.elements.get("status-message").textContent, /en-US-AvaMultilingualNeural.*Edge connection failed/);
     assert.equal(app.elements.get("btn-download-mp3").disabled, true);
-    app.speech.spoken[0].onend();
-    app.run('selectVoice(state.voices.find(voice => voice.ShortName === "ja-JP-NanamiNeural"));');
-    assert.equal(app.run("state.localPreviewVoices.length"), 0);
     app.cleanup();
 });
 
-test("catalog refresh replaces unavailable selections without overwriting custom text", async () => {
+test("catalog refresh keeps the selected voice and text when the voice is no longer listed", async () => {
     const app = createApp();
     app.run('selectVoice({ShortName: "zh-CN-RemovedNeural", Locale: "zh-CN", Gender: "Female"}, false);');
     app.elements.get("tts-text").value = "Keep this text";
@@ -294,66 +173,86 @@ test("catalog refresh replaces unavailable selections without overwriting custom
         { ShortName: "en-US-AvaNeural", FriendlyName: "Microsoft Ava Online (Natural)", Locale: "en-US", Gender: "Female" }
     ] });
     await app.syncVoices();
-    assert.equal(app.run("state.selectedVoice.ShortName"), "en-US-AvaNeural");
+    assert.equal(app.run("state.selectedVoice.ShortName"), "zh-CN-RemovedNeural");
     assert.equal(app.run("state.filterLocale"), "ALL");
-    assert.match(app.elements.get("code-preview-content").textContent, /en-US-AvaNeural/);
+    assert.equal(app.elements.get("current-selected-badge").textContent, "zh-CN-RemovedNeural");
+    assert.ok(app.elements.get("toast-container").children.some(toast => toast.textContent.includes("missing from the refreshed catalog")));
     assert.equal(app.elements.get("tts-text").value, "Keep this text");
     app.cleanup();
 });
 
-test("local fallback is cancellable and late callbacks cannot replace a new request's status", async () => {
-    const app = createApp({ voices: [{ name: "Microsoft Xiaoxiao Online (Natural)", lang: "zh-CN" }] });
-    app.run('synthesizeViaEdgeWebSocket = async () => { throw new Error("Origin blocked"); }');
-    const first = app.run("handleSynthesizeAndPlay()");
-    await flush();
-    const utterance = app.speech.spoken[0];
-    const lateEnd = utterance.onend;
-    app.run("synthesizeViaEdgeWebSocket = () => new Promise(() => {})");
-    app.run("handleSynthesizeAndPlay()");
-    const status = app.elements.get("status-message").textContent;
-    lateEnd();
-    await first;
-    assert.equal(app.elements.get("status-message").textContent, status);
+test("catalog refresh discards malformed entries and escapes display text", async () => {
+    const app = createApp();
+    app.context.fetch = async () => ({ ok: true, json: async () => [
+        { ShortName: "en-US-InvalidNeural", Locale: null },
+        { ShortName: "en-US-AvaNeural", Locale: "en-US", FriendlyName: "<img>", VoiceTag: { ContentCategories: ["<b>", null] } }
+    ] });
+    await app.syncVoices();
+    const list = app.elements.get("voice-list-container").innerHTML;
+    assert.equal(app.run("state.voices.length"), 1);
+    assert.match(list, /&lt;img&gt;/);
+    assert.match(list, /&lt;b&gt;/);
+    assert.equal(app.elements.get("btn-sync-voices").disabled, false);
+    app.context.fetch = async () => ({ ok: true, json: async () => [null] });
+    await app.syncVoices();
+    assert.equal(app.run("state.voices[0].ShortName"), "en-US-AvaNeural");
+    app.cleanup();
+});
+
+test("the preview sends the exact voice, text, and prosody to its same-origin API", async () => {
+    const app = createApp({ pageUrl: "http://localhost:4173/ai-toybox/edge_tts/" });
+    app.run('selectVoice({ ShortName: "sq-AL-AnilaNeural", Locale: "sq-AL" }); state.rate = 25; state.volume = -20; state.pitch = -100;');
+    app.elements.get("tts-text").value = "Përshëndetje & <test>";
+    app.context.fetch = async (url, options) => {
+        assert.equal(url.href, "http://localhost:4173/ai-toybox/api/edge-tts");
+        assert.equal(options.method, "POST");
+        assert.deepEqual(JSON.parse(options.body), {
+            text: "Përshëndetje & <test>", voice: "sq-AL-AnilaNeural", rate: "+25%", volume: "-20%", pitch: "-100Hz"
+        });
+        return audioResponse("sq-AL-AnilaNeural");
+    };
+    await app.run("handleSynthesizeAndPlay()");
+    assert.equal(app.elements.get("btn-download-mp3").disabled, false);
+    app.context.fetch = async () => audioResponse("en-US-AvaNeural");
+    await app.run("handleSynthesizeAndPlay()");
+    assert.match(app.elements.get("status-message").textContent, /invalid result for the selected voice/);
     assert.equal(app.elements.get("btn-download-mp3").disabled, true);
     app.cleanup();
 });
 
-test("missing local dialects fail instead of silently using a default voice", async () => {
-    const app = createApp({ voices: [{ name: "System Female", lang: "zh-CN" }] });
-    app.run('selectVoice(state.voices.find(voice => voice.Locale === "zh-HK")); synthesizeViaEdgeWebSocket = async () => { throw new Error("Origin blocked"); }');
+test("a static deployment without the synthesis endpoint directs users to local Vite", async () => {
+    const app = createApp();
+    app.context.fetch = async url => {
+        assert.equal(url.href, "http://localhost:5173/api/edge-tts");
+        return { ok: false, status: 404, json: async () => { throw new SyntaxError("HTML response"); } };
+    };
     await app.run("handleSynthesizeAndPlay()");
-    assert.equal(app.speech.spoken.length, 0);
-    assert.match(app.elements.get("status-message").textContent, /No local voice is available for zh-HK/);
-    assert.equal(app.run("state.isSynthesizing"), false);
+    assert.match(app.elements.get("status-message").textContent, /local Vite server/);
     app.cleanup();
 });
 
-test("local speech waits for asynchronous voice loading and honors cancellation and mute", async () => {
+test("switching voices cancels an in-flight synthesis", async () => {
     const app = createApp();
-    app.run('state.volume = -100; synthesizeViaEdgeWebSocket = async () => { throw new Error("Origin blocked"); }');
+    let signal;
+    let reply;
+    app.context.fetch = (_, options) => new Promise(resolve => {
+        signal = options.signal;
+        reply = resolve;
+    });
     const pending = app.run("handleSynthesizeAndPlay()");
-    await flush();
-    assert.equal(app.speech.spoken.length, 0);
-    app.speech.voices = [{ name: "Microsoft Xiaoxiao Online (Natural)", lang: "zh-CN" }];
-    app.speech.handlers.get("voiceschanged")();
-    await flush();
-    assert.equal(app.speech.spoken[0].volume, 0);
-    app.run("stopAllPlayback()");
+    app.run('selectVoice(state.voices.find(voice => voice.ShortName === "ja-JP-NanamiNeural"))');
+    reply(audioResponse("zh-CN-XiaoxiaoNeural"));
     await pending;
-    app.speech.voices = [];
-    const canceled = app.run("handleSynthesizeAndPlay()");
-    await flush();
-    app.run("stopAllPlayback()");
-    await canceled;
-    assert.equal(app.speech.handlers.has("voiceschanged"), false);
-    assert.equal(app.run("state.isSynthesizing"), false);
+    assert.equal(signal.aborted, true);
+    assert.match(app.elements.get("status-message").textContent, /Ready to synthesize ja-JP-NanamiNeural/);
+    assert.equal(app.run("state.lastAudioBlobUrl"), null);
     app.cleanup();
 });
 
 test("autoplay rejection, pause, replay, and decode errors update playback state", async () => {
     for (const blockPlayback of [true, false]) {
         const app = createApp({ blockPlayback });
-        app.run('synthesizeViaEdgeWebSocket = async () => ({ blob: new Blob(["audio"], { type: "audio/mpeg" }), cues: [] })');
+        app.context.fetch = async () => audioResponse("zh-CN-XiaoxiaoNeural");
         await app.run("handleSynthesizeAndPlay()");
         const audio = app.elements.get("audio-player");
         if (blockPlayback) {
@@ -372,76 +271,62 @@ test("autoplay rejection, pause, replay, and decode errors update playback state
     }
 });
 
-test("downloads retain the generated voice and real media extension", async () => {
+test("downloads use the generated voice and media extension until the voice changes", async () => {
     const app = createApp();
-    app.run('synthesizeViaEdgeWebSocket = async () => ({ blob: new Blob(["RIFF"], { type: "audio/wav" }), cues: [] })');
+    app.context.fetch = async () => audioResponse("zh-CN-XiaoxiaoNeural");
     await app.run("handleSynthesizeAndPlay()");
-    app.run('selectVoice(state.voices.find(voice => voice.Locale === "ja-JP"))');
     app.elements.get("btn-download-mp3").click();
-    assert.match(app.downloads[0].download, /^zh-CN-XiaoxiaoNeural_\d+\.wav$/);
-    app.elements.get("btn-download-srt").click();
+    assert.match(app.downloads[0].download, /^zh-CN-XiaoxiaoNeural_\d+\.mp3$/);
+    app.elements.get("btn-download-vtt").click();
     assert.equal(app.downloads[1].download, "zh-CN-XiaoxiaoNeural_subtitles.vtt");
+    app.run('selectVoice(state.voices.find(voice => voice.Locale === "ja-JP"))');
+    assert.equal(app.elements.get("btn-download-mp3").disabled, true);
+    assert.equal(app.run("state.lastAudioBlobUrl"), null);
     app.cleanup();
 });
 
-test("generated shell commands preserve text without expanding substitutions", () => {
+test("clearing filters resets both their state and pressed indicators", () => {
     const app = createApp();
-    for (const text of ['$(printf INJECTED)', '`printf INJECTED`', "Quotes: ' and \"; $SENTINEL", "Line one\nLine two\\"]) {
-        app.elements.get("tts-text").value = text;
-        app.run('state.codeTab = "cli"; updateCodePreview()');
-        const script = 'edge-tts() { printf "%s\\0" "$@"; }; edge-playback() { :; };\n' + app.elements.get("code-preview-content").textContent;
-        const result = spawnSync("bash", ["-c", script], { encoding: "utf8", env: { ...process.env, SENTINEL: "EXPANDED" } });
-        assert.equal(result.status, 0, result.stderr);
-        const args = result.stdout.split("\0");
-        assert.equal(args[args.indexOf("--text") + 1], text);
-        assert.equal(args[args.indexOf("--write-subtitles") + 1], "output.srt");
-    }
+    const gender = app.groups.get(".gender-btn");
+    const categories = app.groups.get(".cat-chip");
+    const active = buttons => buttons.find(button => button.getAttribute("aria-pressed") === "true");
+    gender.find(button => button.getAttribute("data-gender") === "Male").click();
+    categories.find(button => button.getAttribute("data-cat") === "News").click();
+    const search = app.elements.get("voice-search");
+    search.value = "no such voice";
+    search.handlers.input({ target: search });
+    app.elements.get("btn-reset-filter").click();
+    assert.equal(active(gender).getAttribute("data-gender"), "ALL");
+    assert.equal(active(categories).getAttribute("data-cat"), "ALL");
+    assert.equal(search.value, "");
+    assert.ok(app.elements.get("filtered-count").textContent > 0);
     app.cleanup();
 });
 
-test.skipIf(!hasPython)("generated Python executes against the current subtitle API and preserves text", () => {
+test("a delayed pause event does not replace the stopped status", async () => {
     const app = createApp();
-    for (const includeSubs of [true, false]) {
-        const text = "Quotes: ' and \"; path: C:\\new\\test\nTrailing slash: \\";
-        app.elements.get("tts-text").value = text;
-        app.elements.get("chk-subtitles").checked = includeSubs;
-        app.run('state.codeTab = "python"; updateCodePreview()');
-        const program = `import builtins, io, json, sys, types
-payload = json.load(sys.stdin)
-files = {}
-class Output:
-    def __init__(self, path, mode, **kwargs):
-        self.path = path
-        self.buffer = io.BytesIO() if "b" in mode else io.StringIO()
-    def __enter__(self): return self.buffer
-    def __exit__(self, *args): files[self.path] = self.buffer.getvalue()
-class Communicate:
-    def __init__(self, text, voice, **kwargs):
-        assert text == payload["text"]
-        assert kwargs["boundary"] == "WordBoundary"
-    async def stream(self):
-        yield {"type": "audio", "data": b"audio"}
-        yield {"type": "WordBoundary", "offset": 0, "duration": 10000, "text": "sample"}
-    async def save(self, path): files[path] = b"audio"
-class SubMaker:
-    def __init__(self): self.messages = []
-    def feed(self, message): self.messages.append(message)
-    def get_srt(self):
-        assert len(self.messages) == 1
-        return "1\\n00:00:00,000 --> 00:00:00,001\\nsample\\n"
-sys.modules["edge_tts"] = types.SimpleNamespace(Communicate=Communicate, SubMaker=SubMaker)
-builtins.open = Output
-exec(payload["source"], {"__name__": "__main__"})
-assert files["output.mp3"] == b"audio"
-assert ("output.srt" in files) == payload["includeSubs"]
-`;
-        const result = spawnSync("python3", ["-c", program], { encoding: "utf8", input: JSON.stringify({ source: app.elements.get("code-preview-content").textContent, text, includeSubs }) });
-        assert.equal(result.status, 0, result.stderr);
-    }
+    app.context.fetch = async () => audioResponse("zh-CN-XiaoxiaoNeural");
+    await app.run("handleSynthesizeAndPlay()");
+    app.run("stopAllPlayback()");
+    app.elements.get("audio-player").emit("pause");
+    assert.equal(app.elements.get("status-message").textContent, "Playback stopped");
     app.cleanup();
 });
 
-test("extra API-key providers and their controls remain removed", () => {
-    assert.doesNotMatch(html, /custom-api|api-mode-select|generativelanguage|synthesizeViaCloudNeuralTTS/);
+test("WebVTT exports input as plain cue text", async () => {
+    const app = createApp();
+    app.context.fetch = async () => ({ ok: true, json: async () => ({
+        voice: "zh-CN-XiaoxiaoNeural", audio: "YXVkaW8=", cues: [{ offset: 0, duration: 0.2, text: "<b>one & two</b>\nthree" }]
+    }) });
+    await app.run("handleSynthesizeAndPlay()");
+    app.elements.get("btn-download-vtt").click();
+    const [{ href }] = app.downloads;
+    assert.match(await (await fetch(href)).text(), /00:00:00\.000 --> 00:00:00\.001\n&lt;b&gt;one &amp; two&lt;\/b&gt; three/);
+    URL.revokeObjectURL(href);
+    app.cleanup();
+});
+
+test("the tool exposes only Edge cloud synthesis and media controls", () => {
+    assert.doesNotMatch(html, /custom-api|api-mode-select|speechSynthesis|code-preview-content|chk-subtitles|new WebSocket|desktop Microsoft Edge|engine-status-tag|VITE_EDGE_TTS_API_URL/);
     assert.doesNotMatch(html, /<a\b[^>]*href="https:\/\/github\.com\/rany2\/edge-tts"/);
 });
