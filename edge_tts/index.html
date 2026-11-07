@@ -333,6 +333,22 @@
                 </div>
                 <p class="text-[11px] text-slate-400">选择音色时按语言填入匹配示例。多语种混读可手动填入。</p>
 
+                <div class="flex flex-wrap items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/50 px-3 py-2">
+                    <div class="min-w-0 flex-1 basis-40">
+                        <div class="flex flex-wrap items-baseline gap-x-2 text-xs">
+                            <span class="text-slate-400">当前音色</span>
+                            <strong id="synthesis-voice-name" class="break-words text-slate-200"></strong>
+                        </div>
+                        <input id="synthesis-voice-id" type="text" readonly aria-label="当前音色 ShortName"
+                               class="w-full rounded bg-transparent py-1 font-mono text-xs text-sky-300">
+                    </div>
+                    <button id="btn-copy-voice-id" type="button" disabled
+                            class="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-xs text-slate-200 hover:bg-slate-700 disabled:opacity-40">
+                        <i data-lucide="copy" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                        <span>复制 ID</span>
+                    </button>
+                </div>
+
                 <!-- 文本编辑框 -->
                 <div>
                     <textarea id="tts-text" rows="4" aria-label="合成文本"
@@ -610,6 +626,11 @@
             }
             state.selectedVoice = voice;
             document.getElementById("current-selected-badge").textContent = shortName ?? "No voice selected";
+            document.getElementById("synthesis-voice-name").textContent = voice?.FriendlyName || shortName || "No voice selected";
+            const voiceIdInput = document.getElementById("synthesis-voice-id");
+            voiceIdInput.value = shortName ?? "";
+            voiceIdInput.disabled = !shortName;
+            document.getElementById("btn-copy-voice-id").disabled = !shortName;
             if (voice && syncSample) {
                 const sampleKey = sampleForLocale(voice.Locale);
                 if (sampleKey) setSampleText(sampleKey);
@@ -617,6 +638,21 @@
             document.querySelectorAll(".voice-card").forEach(card => {
                 card.setAttribute("aria-pressed", String(card.getAttribute("data-voice") === shortName));
             });
+        }
+
+        async function copyVoiceId() {
+            const input = document.getElementById("synthesis-voice-id");
+            const shortName = input.value;
+            if (!shortName) return;
+            try {
+                await window.navigator.clipboard.writeText(shortName);
+                showToast(`Copied ${shortName}`, "success");
+            } catch {
+                if (input.value !== shortName) return;
+                input.focus();
+                input.select();
+                showToast("Voice ID selected. Press Ctrl+C or Command+C to copy.", "info");
+            }
         }
 
         /**
@@ -1152,6 +1188,9 @@
             renderVoiceList();
             renderSampleSelection();
             renderFilterSelection();
+            const voiceIdInput = document.getElementById("synthesis-voice-id");
+            voiceIdInput.addEventListener("click", () => voiceIdInput.select());
+            document.getElementById("btn-copy-voice-id").addEventListener("click", copyVoiceId);
             document.getElementById("char-counter").textContent = `${document.getElementById("tts-text").value.length} characters`;
             drawIdleWaveform();
 

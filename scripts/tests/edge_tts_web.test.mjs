@@ -314,6 +314,7 @@ test("every filter chooses its first visible voice and synthesis sends that voic
         assert.deepEqual(cards[0].slice(1), [expected, "true"]);
         assert.ok(cards.slice(1).every(card => card[2] === "false"));
         assert.equal(app.elements.get("current-selected-badge").textContent, expected);
+        assert.equal(app.elements.get("synthesis-voice-id").value, expected);
         assert.equal(app.run("state.selectedVoice.ShortName"), expected);
     };
     const locale = app.elements.get("locale-filter");
@@ -365,6 +366,8 @@ test("empty results clear selection and cancel pending audio without sending ano
     assert.equal(signal.aborted, true);
     assert.equal(app.run("state.selectedVoice"), null);
     assert.equal(app.elements.get("current-selected-badge").textContent, "No voice selected");
+    assert.equal(app.elements.get("synthesis-voice-id").value, "");
+    assert.equal(app.elements.get("btn-copy-voice-id").disabled, true);
     reply(audioResponse("zh-CN-XiaoxiaoNeural"));
     await pending;
     await app.elements.get("btn-synthesize").click();
@@ -375,6 +378,28 @@ test("empty results clear selection and cancel pending audio without sending ano
     app.elements.get("btn-download-vtt").click();
     assert.equal(app.downloads[0].download, "estimated_subtitles.vtt");
     URL.revokeObjectURL(app.downloads[0].href);
+    app.cleanup();
+});
+
+test("the synthesis panel shows and copies the current voice ID", async () => {
+    const app = createApp();
+    const input = app.elements.get("synthesis-voice-id");
+    const copyButton = app.elements.get("btn-copy-voice-id");
+    const copied = [];
+    app.context.window.navigator = { clipboard: { async writeText(text) { copied.push(text); } } };
+    assert.equal(input.value, "zh-CN-XiaoxiaoNeural");
+    app.run('selectVoice(state.voices.find(voice => voice.ShortName === "en-US-AvaNeural"))');
+    assert.match(app.elements.get("synthesis-voice-name").textContent, /Ava/);
+    assert.equal(input.value, "en-US-AvaNeural");
+    assert.equal(copyButton.disabled, false);
+    await copyButton.click();
+    assert.deepEqual(copied, ["en-US-AvaNeural"]);
+
+    let selected = false;
+    input.select = () => { selected = true; };
+    app.context.window.navigator.clipboard = undefined;
+    await copyButton.click();
+    assert.equal(selected, true);
     app.cleanup();
 });
 
