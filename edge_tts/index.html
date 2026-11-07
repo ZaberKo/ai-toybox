@@ -155,7 +155,7 @@
                             Edge TTS Studio
                         </h1>
                     </div>
-                    <p class="text-xs text-slate-400">浏览微软 Edge 音色、调节语音参数并在线合成</p>
+                    <p data-i18n="Browse Microsoft Edge voices, adjust prosody, and synthesize speech" class="text-xs text-slate-400">浏览微软 Edge 音色、调节语音参数并在线合成</p>
                 </div>
             </div>
 
@@ -164,17 +164,22 @@
                 <div class="hidden sm:flex items-center gap-4 bg-slate-900/90 border border-slate-800 px-3.5 py-1.5 rounded-xl text-xs">
                     <div class="flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span class="text-slate-400">语言与地区</span>
+                        <span data-i18n="Locales" class="text-slate-400">语言与地区</span>
                         <span id="stat-locales" class="font-bold text-white font-mono">--</span>
                     </div>
                     <div class="h-3 w-px bg-slate-800"></div>
                     <div class="flex items-center gap-1.5">
                         <i data-lucide="mic" class="w-3.5 h-3.5 text-sky-400"></i>
-                        <span class="text-slate-400">可用音色:</span>
+                        <span data-i18n="Voices" class="text-slate-400">可用音色</span>
                         <span id="stat-voices" class="font-bold text-white font-mono">--</span>
                     </div>
                 </div>
 
+                <select id="ui-language" aria-label="界面语言" data-i18n-aria-label="Interface language"
+                        class="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs text-slate-100">
+                    <option value="zh-CN" lang="zh-CN">简体中文</option>
+                    <option value="en" lang="en">English</option>
+                </select>
             </div>
         </div>
     </header>
@@ -189,9 +194,9 @@
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <h2 class="text-sm font-semibold flex items-center gap-2 text-slate-200">
                         <i data-lucide="globe-2" class="w-4 h-4 text-sky-400"></i>
-                        <span>支持的语言与语音库 (Voices)</span>
+                        <span data-i18n="Voice library">音色库</span>
                     </h2>
-                    <button id="btn-sync-voices" title="从微软官方接口同步全部 320+ 语音" 
+                    <button id="btn-sync-voices" title="从微软同步音色库" data-i18n-title="Refresh the Microsoft voice library"
                             class="text-xs flex items-center gap-1 text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 disabled:opacity-60 px-2.5 py-1 rounded-lg transition">
                         <i data-lucide="refresh-cw" class="w-3 h-3" id="sync-icon"></i>
                         <span id="sync-text">同步云端完整列表</span>
@@ -201,7 +206,8 @@
                 <!-- 关键字搜索框 -->
                 <div class="relative">
                     <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
-                    <input type="search" id="voice-search" aria-label="搜索音色" placeholder="搜索语言、地区、ShortName (如 Xiaoxiao, zh-CN, ja-JP)..."
+                    <input type="search" id="voice-search" aria-label="搜索音色" data-i18n-aria-label="Search voices"
+                           placeholder="搜索语言、地区或 ShortName" data-i18n-placeholder="Search by language, region, or ShortName"
                            class="w-full bg-slate-950/90 border border-slate-800 focus:border-sky-500 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none transition">
                 </div>
 
@@ -209,26 +215,26 @@
                 <div class="grid grid-cols-12 gap-2">
                     <!-- 语言/地区下拉选择 -->
                     <div class="col-span-7">
-                        <select id="locale-filter" aria-label="按语言或地区筛选" class="w-full bg-slate-950/90 border border-slate-800 focus:border-sky-500 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
-                            <option value="ALL">🌍 所有语言与地区 (All Locales)</option>
+                        <select id="locale-filter" aria-label="按语言或地区筛选" data-i18n-aria-label="Filter by locale" class="w-full bg-slate-950/90 border border-slate-800 focus:border-sky-500 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
+                            <option value="ALL">所有语言与地区</option>
                         </select>
                     </div>
                     <!-- 性别筛选 -->
                     <div class="col-span-5 flex bg-slate-950/90 p-0.5 rounded-xl border border-slate-800">
-                        <button data-gender="ALL" aria-pressed="true" class="gender-btn flex-1 text-xs py-1 rounded-lg text-slate-400 hover:text-slate-200 transition">全部</button>
-                        <button data-gender="Female" class="gender-btn flex-1 text-xs py-1 rounded-lg text-slate-400 hover:text-slate-200 transition">女声</button>
-                        <button data-gender="Male" class="gender-btn flex-1 text-xs py-1 rounded-lg text-slate-400 hover:text-slate-200 transition">男声</button>
+                        <button data-gender="ALL" data-i18n="All" aria-pressed="true" class="gender-btn flex-1 text-xs py-1 rounded-lg text-slate-400 hover:text-slate-200 transition">全部</button>
+                        <button data-gender="Female" data-i18n="Female" class="gender-btn flex-1 text-xs py-1 rounded-lg text-slate-400 hover:text-slate-200 transition">女声</button>
+                        <button data-gender="Male" data-i18n="Male" class="gender-btn flex-1 text-xs py-1 rounded-lg text-slate-400 hover:text-slate-200 transition">男声</button>
                     </div>
                 </div>
 
                 <!-- 分类标签筛选 (ContentCategories / VoicePersonalities) -->
                 <div class="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-[11px]" id="category-chips">
-                    <button data-cat="ALL" aria-pressed="true" class="cat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200">全部特性</button>
-                    <button data-cat="Multilingual" class="cat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200">🔥 多语言混合 (Multilingual)</button>
-                    <button data-cat="Conversation" class="cat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200">自然对话</button>
-                    <button data-cat="News" class="cat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200">新闻播报</button>
-                    <button data-cat="Novel" class="cat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200">小说故事</button>
-                    <button data-cat="Dialect" class="cat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200">特色方言</button>
+                    <button data-cat="ALL" data-i18n="All features" aria-pressed="true" class="cat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200">全部特性</button>
+                    <button data-cat="Multilingual" data-i18n="Multilingual" class="cat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200">多语种</button>
+                    <button data-cat="Conversation" data-i18n="Conversation" class="cat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200">自然对话</button>
+                    <button data-cat="News" data-i18n="News" class="cat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200">新闻播报</button>
+                    <button data-cat="Novel" data-i18n="Novel" class="cat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200">小说故事</button>
+                    <button data-cat="Dialect" data-i18n="Dialect" class="cat-chip shrink-0 px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200">方言</button>
                 </div>
             </div>
 
@@ -239,7 +245,7 @@
 
             <!-- 底部列表状态栏 -->
             <div class="px-4 py-2.5 bg-slate-900/80 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
-                <span>当前筛选结果: <strong id="filtered-count" class="text-slate-200">0</strong> 个音色</span>
+                <span><span data-i18n="Matches">匹配音色</span> <strong id="filtered-count" class="text-slate-200">0</strong></span>
                 <span class="min-w-0 break-all font-mono text-[11px] text-sky-400" id="current-selected-badge">zh-CN-XiaoxiaoNeural</span>
             </div>
         </section>
@@ -252,11 +258,11 @@
                 <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
                     <div class="flex items-center gap-2">
                         <i data-lucide="sliders" class="w-4 h-4 text-sky-400"></i>
-                        <h2 class="text-sm font-semibold text-slate-200">合成参数</h2>
+                        <h2 data-i18n="Speech settings" class="text-sm font-semibold text-slate-200">合成参数</h2>
                     </div>
                     <button id="btn-reset-params" class="text-xs text-slate-400 hover:text-sky-400 flex items-center gap-1 transition">
                         <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-                        <span>恢复默认</span>
+                        <span data-i18n="Reset settings">恢复默认</span>
                     </button>
                 </div>
 
@@ -267,14 +273,14 @@
                         <div class="flex items-center justify-between">
                             <label for="param-rate" class="text-xs font-medium text-slate-300 flex items-center gap-1.5">
                                 <i data-lucide="gauge" class="w-3.5 h-3.5 text-sky-400"></i>
-                                <span>语速</span>
+                                <span data-i18n="Rate">语速</span>
                             </label>
                             <span id="val-rate" class="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">+0%</span>
                         </div>
                         <input type="range" id="param-rate" min="-100" max="100" step="5" value="0" class="w-full">
                         <div class="flex justify-between text-[10px] text-slate-500 font-mono">
-                            <span>-100% (慢)</span>
-                            <span>+100% (快)</span>
+                            <span data-i18n="-100% (slow)">-100% (慢)</span>
+                            <span data-i18n="+100% (fast)">+100% (快)</span>
                         </div>
                     </div>
 
@@ -283,14 +289,14 @@
                         <div class="flex items-center justify-between">
                             <label for="param-volume" class="text-xs font-medium text-slate-300 flex items-center gap-1.5">
                                 <i data-lucide="volume-2" class="w-3.5 h-3.5 text-emerald-400"></i>
-                                <span>音量</span>
+                                <span data-i18n="Volume">音量</span>
                             </label>
                             <span id="val-volume" class="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">+0%</span>
                         </div>
                         <input type="range" id="param-volume" min="-100" max="100" step="5" value="0" class="w-full">
                         <div class="flex justify-between text-[10px] text-slate-500 font-mono">
-                            <span>-100% (轻)</span>
-                            <span>+100% (响)</span>
+                            <span data-i18n="-100% (quiet)">-100% (轻)</span>
+                            <span data-i18n="+100% (loud)">+100% (响)</span>
                         </div>
                     </div>
 
@@ -299,14 +305,14 @@
                         <div class="flex items-center justify-between">
                             <label for="param-pitch" class="text-xs font-medium text-slate-300 flex items-center gap-1.5">
                                 <i data-lucide="music" class="w-3.5 h-3.5 text-purple-400"></i>
-                                <span>音调</span>
+                                <span data-i18n="Pitch">音调</span>
                             </label>
                             <span id="val-pitch" class="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">+0Hz</span>
                         </div>
                         <input type="range" id="param-pitch" min="-100" max="100" step="5" value="0" class="w-full">
                         <div class="flex justify-between text-[10px] text-slate-500 font-mono">
-                            <span>-100Hz (低沉)</span>
-                            <span>+100Hz (高亢)</span>
+                            <span data-i18n="-100Hz (low)">-100Hz (低沉)</span>
+                            <span data-i18n="+100Hz (high)">+100Hz (高亢)</span>
                         </div>
                     </div>
                 </div>
@@ -318,45 +324,45 @@
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <div class="flex items-center gap-2">
                         <i data-lucide="message-square-text" class="w-4 h-4 text-sky-400"></i>
-                        <h2 class="text-sm font-semibold text-slate-200">合成文本与在线试听</h2>
+                        <h2 data-i18n="Text and audio preview" class="text-sm font-semibold text-slate-200">合成文本与在线试听</h2>
                     </div>
 
                     <!-- Sample text shortcuts -->
                     <div class="flex items-center gap-1.5 flex-wrap">
-                        <span class="text-[11px] text-slate-400 mr-1">填入示例文本</span>
-                        <button data-sample="zh" class="sample-btn text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">🇨🇳 中文普通话</button>
-                        <button data-sample="hk" class="sample-btn text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-500/30 transition">🇭🇰 香港粤语</button>
-                        <button data-sample="en" class="sample-btn text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">🇺🇸 英文科技</button>
-                        <button data-sample="ja" class="sample-btn text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">🇯🇵 日语动漫</button>
-                        <button data-sample="multi" class="sample-btn text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">🌐 多语种混读</button>
+                        <span data-i18n="Examples" class="text-[11px] text-slate-400 mr-1">填入示例文本</span>
+                        <button data-sample="zh" data-i18n="Mandarin" class="sample-btn text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">普通话</button>
+                        <button data-sample="hk" data-i18n="Hong Kong Cantonese" class="sample-btn text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-500/30 transition">香港粤语</button>
+                        <button data-sample="en" data-i18n="English" class="sample-btn text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">英语</button>
+                        <button data-sample="ja" data-i18n="Japanese" class="sample-btn text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">日语</button>
+                        <button data-sample="multi" data-i18n="Mixed languages" class="sample-btn text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">多语种混读</button>
                     </div>
                 </div>
-                <p class="text-[11px] text-slate-400">选择音色时按语言填入匹配示例。多语种混读可手动填入。</p>
+                <p data-i18n="Voice selection loads a matching example when available. Choose the mixed-language example manually." class="text-[11px] text-slate-400">选择音色时按语言填入匹配示例。多语种混读可手动填入。</p>
 
                 <div class="flex flex-wrap items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/50 px-3 py-2">
                     <div class="min-w-0 flex-1 basis-40">
                         <div class="flex flex-wrap items-baseline gap-x-2 text-xs">
-                            <span class="text-slate-400">当前音色</span>
+                            <span data-i18n="Selected voice" class="text-slate-400">当前音色</span>
                             <strong id="synthesis-voice-name" class="break-words text-slate-200"></strong>
                         </div>
-                        <input id="synthesis-voice-id" type="text" readonly aria-label="当前音色 ShortName"
+                        <input id="synthesis-voice-id" type="text" readonly aria-label="当前音色 ShortName" data-i18n-aria-label="Selected voice ShortName"
                                class="w-full rounded bg-transparent py-1 font-mono text-xs text-sky-300">
                     </div>
                     <button id="btn-copy-voice-id" type="button" disabled
                             class="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-xs text-slate-200 hover:bg-slate-700 disabled:opacity-40">
                         <i data-lucide="copy" class="h-3.5 w-3.5" aria-hidden="true"></i>
-                        <span>复制 ID</span>
+                        <span data-i18n="Copy ID">复制 ID</span>
                     </button>
                 </div>
 
                 <!-- 文本编辑框 -->
                 <div>
-                    <textarea id="tts-text" rows="4" aria-label="合成文本"
+                    <textarea id="tts-text" rows="4" aria-label="合成文本" data-i18n-aria-label="Synthesis text"
                               class="w-full bg-slate-950/90 border border-slate-800 focus:border-sky-500 rounded-xl p-3.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none transition resize-y leading-relaxed"
-                              placeholder="在此输入需要转换为语音的文字内容...">欢迎使用 Edge-TTS 语音合成控制台！你可以通过左侧列表自由切换全球上百种语言和神经网络音色，并通过上方滑块实时调节语速、音量与音调。</textarea>
+                              placeholder="输入要合成的文本" data-i18n-placeholder="Enter text to synthesize">欢迎使用 Edge-TTS 语音合成控制台！你可以通过左侧列表自由切换全球上百种语言和神经网络音色，并通过上方滑块实时调节语速、音量与音调。</textarea>
                     <div class="flex items-center justify-end gap-3 pt-1 text-[11px] text-slate-400">
                         <span id="char-counter">69 字符</span>
-                        <button id="btn-clear-text" class="hover:text-rose-400 transition" title="清空文本">清空</button>
+                        <button id="btn-clear-text" data-i18n="Clear" class="hover:text-rose-400 transition">清空</button>
                     </div>
                 </div>
 
@@ -372,7 +378,7 @@
                         <button id="btn-stop" disabled
                                 class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-rose-500/20 hover:text-rose-300 hover:border-rose-500/30 disabled:opacity-40 disabled:pointer-events-none text-slate-300 border border-slate-700 text-sm font-medium flex items-center gap-1.5 transition">
                             <i data-lucide="square" class="w-4 h-4 fill-current"></i>
-                            <span>停止</span>
+                            <span data-i18n="Stop">停止</span>
                         </button>
                     </div>
 
@@ -383,10 +389,10 @@
                             <i data-lucide="download" class="w-3.5 h-3.5"></i>
                             <span>下载 MP3</span>
                         </button>
-                        <button id="btn-download-vtt" title="优先使用合成时间点，缺少时间点时按文本估算"
+                        <button id="btn-download-vtt" title="优先使用合成时间点，缺少时间点时按文本估算" data-i18n-title="Use synthesis timestamps when available, or estimate from the text"
                                 class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-xs font-medium text-emerald-300 border border-slate-700 transition">
                             <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
-                            <span>导出 WebVTT 字幕</span>
+                            <span data-i18n="Export WebVTT">导出 WebVTT 字幕</span>
                         </button>
                     </div>
                 </div>
@@ -417,7 +423,164 @@
     <!-- 全局非阻塞通知提示框 -->
     <div id="toast-container" class="fixed bottom-5 left-4 right-4 sm:left-auto sm:right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
 
+    <script type="application/json" id="edge-tts-zh">
+        {
+            "Edge TTS Studio | Neural voice synthesis": "Edge TTS Studio | 神经网络语音合成",
+            "Browse Microsoft Edge voices, adjust prosody, and synthesize speech": "浏览微软 Edge 音色、调节语音参数并在线合成",
+            "Interface language": "界面语言",
+            "Locales": "语言与地区",
+            "Voices": "可用音色",
+            "Voice library": "音色库",
+            "Refresh the Microsoft voice library": "从微软同步音色库",
+            "Refresh voices": "同步云端音色",
+            "Search voices": "搜索音色",
+            "Search by language, region, or ShortName": "搜索语言、地区或 ShortName",
+            "Filter by locale": "按语言或地区筛选",
+            "All locales ({locales} locales / {voices} voices)": "所有语言与地区（{locales} 项 / {voices} 音色）",
+            "All": "全部",
+            "Female": "女声",
+            "Male": "男声",
+            "All features": "全部特性",
+            "Multilingual": "多语种",
+            "Conversation": "自然对话",
+            "News": "新闻播报",
+            "Novel": "小说故事",
+            "Dialect": "方言",
+            "Cartoon": "动漫",
+            "Sports": "体育",
+            "General": "通用",
+            "Matches": "匹配音色",
+            "No voice matches the current filters.": "当前筛选没有匹配的音色。",
+            "Clear filters": "清除筛选条件",
+            "Speech settings": "合成参数",
+            "Reset settings": "恢复默认",
+            "Rate": "语速",
+            "Volume": "音量",
+            "Pitch": "音调",
+            "-100% (slow)": "-100% (慢)",
+            "+100% (fast)": "+100% (快)",
+            "-100% (quiet)": "-100% (轻)",
+            "+100% (loud)": "+100% (响)",
+            "-100Hz (low)": "-100Hz (低沉)",
+            "+100Hz (high)": "+100Hz (高亢)",
+            "Text and audio preview": "合成文本与在线试听",
+            "Examples": "填入示例文本",
+            "Mandarin": "普通话",
+            "Hong Kong Cantonese": "香港粤语",
+            "English": "英语",
+            "Japanese": "日语",
+            "Mixed languages": "多语种混读",
+            "Voice selection loads a matching example when available. Choose the mixed-language example manually.": "选择音色时按语言填入匹配示例。多语种混读可手动填入。",
+            "Selected voice": "当前音色",
+            "Selected voice ShortName": "当前音色 ShortName",
+            "Copy ID": "复制 ID",
+            "Synthesis text": "合成文本",
+            "Enter text to synthesize": "输入要合成的文本",
+            "{count} characters": "{count} 字符",
+            "Clear": "清空",
+            "Stop": "停止",
+            "Export WebVTT": "导出 WebVTT 字幕",
+            "Use synthesis timestamps when available, or estimate from the text": "优先使用合成时间点，缺少时间点时按文本估算",
+            "Ready. Select Generate and play to synthesize speech.": "就绪，点击「生成并播放语音」开始合成。",
+            "Ready to synthesize {voice}": "就绪，当前音色为 {voice}。",
+            "No voice selected": "未选择音色",
+            "Copied {voice}": "已复制 {voice}。",
+            "Voice ID selected. Press Ctrl+C or Command+C to copy.": "已选中音色 ID，请按 Ctrl+C 或 Command+C 复制。",
+            "Syncing...": "正在同步…",
+            "{voice} is missing from the refreshed catalog.": "刷新后的音色库中没有 {voice}。",
+            "Edge voice catalog refreshed ({count} voices)": "已同步 Edge 音色库（{count} 个音色）。",
+            "Synced ({count})": "已同步（{count}）",
+            "Could not refresh the Edge voice catalog. The previous list is still available.": "无法刷新 Edge 音色库，仍可使用之前的列表。",
+            "Voice catalog ({count})": "音色库（{count}）",
+            "Open this tool through the local Vite server to synthesize audio.": "请通过本地 Vite 服务打开此工具以合成音频。",
+            "The synthesis service could not be reached.": "无法连接语音合成服务。",
+            "The synthesis request failed.": "语音合成请求失败。",
+            "The synthesis service returned an invalid result for the selected voice.": "语音合成服务返回了无效结果。",
+            "Open the tool on the same origin as the Vite server.": "请通过 Vite 服务的同源地址打开此工具。",
+            "Use POST for synthesis requests.": "语音合成请求必须使用 POST。",
+            "Send the synthesis request as JSON.": "语音合成请求必须使用 JSON。",
+            "The synthesis service is busy. Try again shortly.": "语音合成服务繁忙，请稍后重试。",
+            "The synthesis request exceeds 64 KiB.": "语音合成请求超过 64 KiB。",
+            "Invalid synthesis JSON.": "语音合成请求的 JSON 无效。",
+            "Provide text, an Edge voice ID, and valid prosody parameters.": "请提供文本、Edge 音色 ID 和有效的合成参数。",
+            "Enter text that can be synthesized.": "请输入可合成的文本。",
+            "The synthesized audio is too large.": "合成的音频文件过大。",
+            "Synthesis took too long. Try a shorter passage.": "合成超时，请尝试使用较短的文本。",
+            "The Microsoft speech service could not synthesize the selected voice.": "微软语音服务无法合成所选音色。",
+            "Enter text to synthesize.": "请输入要合成的文本。",
+            "Requesting Edge TTS [{voice}]...": "正在使用 Edge TTS 合成 [{voice}]…",
+            "Edge TTS ready [{voice}]": "正在播放 Edge TTS 音频 [{voice}]。",
+            "Synthesis failed for {voice}. {error}": "音色 {voice} 合成失败。{error}",
+            "Unsupported audio format": "不支持该音频格式。",
+            "Download {format}": "下载 {format}",
+            "Audio paused": "播放已暂停。",
+            "Audio playback complete": "播放完成。",
+            "Audio playback failed. The audio could not be loaded or decoded.": "播放失败，无法加载或解码音频。",
+            "Playback could not start. Use the audio controls to retry or download the audio.": "无法自动播放，请使用播放器重试或下载音频。",
+            "Playback stopped": "播放已停止。",
+            "Generate and play": "生成并播放语音",
+            "Generate and play again": "重新合成播放",
+            "Speech settings reset.": "已恢复默认合成参数。",
+            "Audio download started": "已开始下载音频。",
+            "Enter text or synthesize audio before exporting subtitles": "请输入文本或先合成音频，再导出字幕。",
+            "WebVTT subtitles exported": "已导出 WebVTT 字幕。",
+            "WebVTT exported with estimated timing. Timing may differ from the audio.": "已导出估算时间的 WebVTT 字幕，时间点可能与音频不同。"
+        }
+    </script>
     <script id="edge-tts-app">
+        const chineseMessages = JSON.parse(document.getElementById("edge-tts-zh").textContent);
+        const languageStorageKey = "edge-tts-ui-language";
+        const localeNames = {
+            "zh-CN": new Intl.DisplayNames("zh-CN", { type: "language" }),
+            en: new Intl.DisplayNames("en", { type: "language" })
+        };
+        const toastMessages = new Map();
+        let uiLanguage = "zh-CN";
+
+        function t(message, values = {}) {
+            const translate = text => uiLanguage === "zh-CN" && Object.hasOwn(chineseMessages, text)
+                ? chineseMessages[text] : text;
+            return translate(message).replace(/\{(\w+)\}/g, (token, key) =>
+                Object.hasOwn(values, key) ? translate(values[key]) : token);
+        }
+
+        function applyUiLanguage(language) {
+            uiLanguage = language === "en" ? "en" : "zh-CN";
+            document.documentElement.lang = uiLanguage;
+            document.title = t("Edge TTS Studio | Neural voice synthesis");
+            document.getElementById("ui-language").value = uiLanguage;
+            for (const attribute of ["text", "placeholder", "title", "aria-label"]) {
+                const key = attribute === "text" ? "data-i18n" : `data-i18n-${attribute}`;
+                document.querySelectorAll(`[${key}]`).forEach(element => {
+                    const message = t(element.getAttribute(key));
+                    if (attribute === "text") element.textContent = message;
+                    else element.setAttribute(attribute, message);
+                });
+            }
+            populateLocaleDropdown();
+            renderVoiceList();
+            renderCatalogStatus();
+            renderCharCount();
+            renderSynthesisStatus();
+            renderDownloadLabel();
+            for (const [toast, { message, values }] of toastMessages) toast.textContent = t(message, values);
+        }
+
+        function localeName(locale, language = uiLanguage) {
+            if (language === "zh-CN" && LOCALE_NAME_MAP[locale]) return LOCALE_NAME_MAP[locale];
+            try {
+                return localeNames[language].of(locale) || locale;
+            } catch {
+                return locale;
+            }
+        }
+
+        function voiceName(voice) {
+            if (uiLanguage === "en" && /\p{Script=Han}/u.test(voice.FriendlyName)) {
+                return voice.ShortName.split("-").at(-1).replace(/Neural$/, "");
+            }
+            return voice.FriendlyName || voice.ShortName;
+        }
         /**
          * ============================================================================
          * 1. 内置完整的 edge-tts 多语言与音色精选数据库 (涵盖全球主要语种及所有热门 Neural 语音)
@@ -581,6 +744,8 @@
             volume: 0,   // 百分比 -100 ~ +100
             pitch: 0,    // Hz -100 ~ +100
             isSynthesizing: false,
+            catalogStatus: "Refresh voices",
+            synthesisStatus: { message: "Ready. Select Generate and play to synthesize speech.", values: {} },
             lastAudioBlobUrl: null,
             lastSynthesis: null,
             synthesisController: null,
@@ -593,8 +758,13 @@
             const textArea = document.getElementById("tts-text");
             textArea.value = SAMPLE_TEXTS[key];
             state.selectedSample = key;
-            document.getElementById("char-counter").textContent = `${textArea.value.length} characters`;
+            renderCharCount();
             renderSampleSelection();
+        }
+
+        function renderCharCount() {
+            const count = document.getElementById("tts-text").value.length;
+            document.getElementById("char-counter").textContent = t("{count} characters", { count });
         }
 
         function renderSampleSelection() {
@@ -622,11 +792,11 @@
             if (state.selectedVoice?.ShortName !== shortName) {
                 stopAllPlayback();
                 clearAudioResult();
-                setSynthesizingUI(false, voice ? `Ready to synthesize ${shortName}` : noMatchingVoiceMessage);
+                setSynthesizingUI(false, voice ? "Ready to synthesize {voice}" : noMatchingVoiceMessage, { voice: shortName });
             }
             state.selectedVoice = voice;
-            document.getElementById("current-selected-badge").textContent = shortName ?? "No voice selected";
-            document.getElementById("synthesis-voice-name").textContent = voice?.FriendlyName || shortName || "No voice selected";
+            document.getElementById("current-selected-badge").textContent = shortName ?? t("No voice selected");
+            document.getElementById("synthesis-voice-name").textContent = voice ? voiceName(voice) : t("No voice selected");
             const voiceIdInput = document.getElementById("synthesis-voice-id");
             voiceIdInput.value = shortName ?? "";
             voiceIdInput.disabled = !shortName;
@@ -646,7 +816,7 @@
             if (!shortName) return;
             try {
                 await window.navigator.clipboard.writeText(shortName);
-                showToast(`Copied ${shortName}`, "success");
+                showToast("Copied {voice}", "success", { voice: shortName });
             } catch {
                 if (input.value !== shortName) return;
                 input.focus();
@@ -660,7 +830,7 @@
          * 3. UI 渲染与交互逻辑
          * ============================================================================
          */
-        function showToast(message, type = "info") {
+        function showToast(message, type = "info", values = {}) {
             const container = document.getElementById("toast-container");
             const toast = document.createElement("div");
             const colors = {
@@ -670,9 +840,11 @@
                 error: "border-rose-500/40 bg-slate-900/95 text-rose-300"
             };
             toast.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-xl backdrop-blur-md text-xs font-medium flex items-center gap-2 transition-all duration-300 ${colors[type] || colors.info}`;
-            toast.textContent = message;
+            toast.textContent = t(message, values);
             container.appendChild(toast);
+            toastMessages.set(toast, { message, values });
             setTimeout(() => {
+                toastMessages.delete(toast);
                 toast.style.opacity = "0";
                 toast.style.transform = "translateY(8px)";
                 setTimeout(() => toast.remove(), 300);
@@ -699,10 +871,11 @@
                 return a.localeCompare(b);
             });
 
-            select.innerHTML = `<option value="ALL">🌍 所有语言与地区 (${sortedLocales.length} 项 / ${state.voices.length} 音色)</option>`;
+            const allLocales = t("All locales ({locales} locales / {voices} voices)", { locales: sortedLocales.length, voices: state.voices.length });
+            select.innerHTML = `<option value="ALL">${allLocales}</option>`;
             sortedLocales.forEach(loc => {
                 const count = state.voices.filter(v => v.Locale === loc).length;
-                const readable = LOCALE_NAME_MAP[loc] || state.voices.find(v => v.Locale === loc)?.LocaleName || loc;
+                const readable = localeName(loc);
                 const option = document.createElement("option");
                 option.value = loc;
                 option.textContent = `${loc} — ${readable} (${count})`;
@@ -743,7 +916,7 @@
                     }
                 }
                 if (search) {
-                    const hay = `${v.ShortName} ${v.FriendlyName} ${v.Locale} ${LOCALE_NAME_MAP[v.Locale] || ""} ${(v.Categories || []).join(" ")}`.toLowerCase();
+                    const hay = `${v.ShortName} ${v.FriendlyName} ${v.Locale} ${localeName(v.Locale, "zh-CN")} ${localeName(v.Locale, "en")} ${(v.Categories || []).join(" ")}`.toLowerCase();
                     if (!hay.includes(search)) return false;
                 }
                 return true;
@@ -760,8 +933,8 @@
             if (filtered.length === 0) {
                 container.innerHTML = `
                     <div class="h-48 flex flex-col items-center justify-center text-slate-500 text-xs space-y-2">
-                        <p>未找到匹配的语音音色</p>
-                        <button id="btn-reset-filter" class="px-3 py-1 rounded-lg bg-slate-800 text-sky-400 hover:bg-slate-700">清除筛选条件</button>
+                        <p>${t(noMatchingVoiceMessage)}</p>
+                        <button id="btn-reset-filter" class="px-3 py-1 rounded-lg bg-slate-800 text-sky-400 hover:bg-slate-700">${t("Clear filters")}</button>
                     </div>
                 `;
                 document.getElementById("btn-reset-filter")?.addEventListener("click", () => {
@@ -782,24 +955,24 @@
             container.innerHTML = filtered.map(v => {
                 const isSelected = nextVoice.ShortName === v.ShortName;
                 const genderBadge = v.Gender === "Female" 
-                    ? `<span class="px-1.5 py-0.5 rounded text-[10px] bg-pink-500/15 text-pink-300 border border-pink-500/25">♀ 女声</span>`
-                    : `<span class="px-1.5 py-0.5 rounded text-[10px] bg-blue-500/15 text-blue-300 border border-blue-500/25">♂ 男声</span>`;
+                    ? `<span class="px-1.5 py-0.5 rounded text-[10px] bg-pink-500/15 text-pink-300 border border-pink-500/25">♀ ${t("Female")}</span>`
+                    : `<span class="px-1.5 py-0.5 rounded text-[10px] bg-blue-500/15 text-blue-300 border border-blue-500/25">♂ ${t("Male")}</span>`;
                 
                 const tags = (v.Categories || []).slice(0, 3).map(cat => 
-                    `<span class="px-1.5 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400">${escapeXml(cat)}</span>`
+                    `<span class="px-1.5 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400">${escapeXml(t(cat))}</span>`
                 ).join("");
 
                 return `
                     <button type="button" data-voice="${escapeXml(v.ShortName)}" aria-pressed="${isSelected}" class="voice-card block w-full cursor-pointer rounded-xl p-3 text-left transition border">
                         <span class="flex items-start justify-between gap-2">
                             <span class="min-w-0">
-                                <span class="block break-words text-xs font-semibold text-slate-100">${escapeXml(v.FriendlyName)}</span>
+                                <span class="block break-words text-xs font-semibold text-slate-100">${escapeXml(voiceName(v))}</span>
                                 <span class="block break-all text-[11px] font-mono text-sky-400 mt-0.5">${escapeXml(v.ShortName)}</span>
                             </span>
                             ${genderBadge}
                         </span>
                         <span class="flex flex-wrap items-center justify-between gap-1 mt-2 pt-2 border-t border-slate-800/60 text-[10px] text-slate-400">
-                            <span>${escapeXml(LOCALE_NAME_MAP[v.Locale] || v.LocaleName || v.Locale)}</span>
+                            <span>${escapeXml(localeName(v.Locale))}</span>
                             <span class="flex flex-wrap items-center gap-1">${tags}</span>
                         </span>
                     </button>
@@ -828,14 +1001,18 @@
          * 5. Refresh the Microsoft Edge voice catalog
          * ============================================================================
          */
+        function renderCatalogStatus() {
+            document.getElementById("sync-text").textContent = t(state.catalogStatus, { count: state.voices.length });
+        }
+
         async function syncAllCloudVoices() {
             const button = document.getElementById("btn-sync-voices");
             if (button.disabled) return;
             button.disabled = true;
             const icon = document.getElementById("sync-icon");
-            const text = document.getElementById("sync-text");
             icon.classList.add("animate-spin");
-            text.textContent = "Syncing...";
+            state.catalogStatus = "Syncing...";
+            renderCatalogStatus();
 
             try {
                 const url = `https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=${EDGE_CLIENT_TOKEN}`;
@@ -860,16 +1037,17 @@
                 populateLocaleDropdown();
                 renderVoiceList();
                 if (selected && !voices.some(voice => voice.ShortName === selected.ShortName)) {
-                    showToast(`${selected.ShortName} is missing from the refreshed catalog.`, "warning");
+                    showToast("{voice} is missing from the refreshed catalog.", "warning", { voice: selected.ShortName });
                 }
-                showToast(`Edge voice catalog refreshed (${state.voices.length} voices)`, "success");
-                text.textContent = `Synced (${state.voices.length})`;
+                showToast("Edge voice catalog refreshed ({count} voices)", "success", { count: state.voices.length });
+                state.catalogStatus = "Synced ({count})";
             } catch (err) {
                 showToast("Could not refresh the Edge voice catalog. The previous list is still available.", "warning");
-                text.textContent = `Voice catalog (${state.voices.length})`;
+                state.catalogStatus = "Voice catalog ({count})";
             } finally {
                 button.disabled = false;
                 icon.classList.remove("animate-spin");
+                renderCatalogStatus();
             }
         }
 
@@ -970,23 +1148,24 @@
             const volumeStr = formatSignedParam(volume, "%");
             const pitchStr = formatSignedParam(pitch, "Hz");
 
-            setSynthesizingUI(true, `Requesting Edge TTS [${voice.ShortName}]...`);
+            setSynthesizingUI(true, "Requesting Edge TTS [{voice}]...", { voice: voice.ShortName });
             try {
                 const { blob, cues } = await requestSynthesis(text, voice.ShortName, rateStr, volumeStr, pitchStr, signal);
                 if (signal.aborted || state.synthesisController !== controller) return;
                 synthesis.estimated = cues.length === 0;
                 state.subtitlesCueList = synthesis.estimated ? generateEstimatedSubtitles(text, rate) : cues;
-                await playAudioBlob(blob, `Edge TTS ready [${voice.ShortName}]`, synthesis, signal);
+                await playAudioBlob(blob, synthesis, signal);
             } catch (error) {
                 if (signal.aborted || state.synthesisController !== controller) return;
                 stopVisualizer();
-                const message = `Synthesis failed for ${voice.ShortName}: ${error.message}`;
-                setSynthesizingUI(false, message);
-                showToast(message, "error");
+                const message = "Synthesis failed for {voice}. {error}";
+                const values = { voice: voice.ShortName, error: error.message };
+                setSynthesizingUI(false, message, values);
+                showToast(message, "error", values);
             }
         }
 
-        async function playAudioBlob(blob, statusMsg, synthesis, signal) {
+        async function playAudioBlob(blob, synthesis, signal) {
             signal?.throwIfAborted();
             const extensions = { "audio/mpeg": "mp3", "audio/mp3": "mp3", "audio/wav": "wav", "audio/x-wav": "wav", "audio/ogg": "ogg" };
             const extension = extensions[blob.type.split(";")[0].toLowerCase()];
@@ -1002,13 +1181,13 @@
             audioEl.src = url;
             audioEl.classList.remove("hidden");
             document.getElementById("btn-download-mp3").disabled = false;
-            document.getElementById("btn-download-mp3").querySelector("span").textContent = `Download ${extension.toUpperCase()}`;
+            renderDownloadLabel();
             const isCurrentMedia = () => state.lastAudioBlobUrl === url && state.lastSynthesis === synthesis;
 
             audioEl.onplaying = () => {
                 if (!isCurrentMedia() || audioEl.paused) return;
                 startVisualizer();
-                setSynthesizingUI(true, statusMsg);
+                setSynthesizingUI(true, "Edge TTS ready [{voice}]", { voice: synthesis.voice.ShortName });
             };
             audioEl.onpause = () => {
                 if (!isCurrentMedia() || !state.isSynthesizing) return;
@@ -1034,11 +1213,12 @@
 
             try {
                 await audioEl.play();
-            } catch (error) {
+            } catch {
                 if (!isCurrentMedia() || signal?.aborted) return;
                 stopVisualizer();
-                setSynthesizingUI(false, `Playback could not start: ${error.message}. Use the audio controls to retry.`);
-                showToast("Playback could not start. Use the audio controls to retry or download the audio.", "warning");
+                const message = "Playback could not start. Use the audio controls to retry or download the audio.";
+                setSynthesizingUI(false, message);
+                showToast(message, "warning");
             }
         }
 
@@ -1054,8 +1234,13 @@
             state.lastSynthesis = null;
             state.subtitlesCueList = [];
             document.getElementById("btn-download-mp3").disabled = true;
-            document.getElementById("btn-download-mp3").querySelector("span").textContent = "Download MP3";
+            renderDownloadLabel();
             document.getElementById("WordBoundary-display").textContent = "";
+        }
+
+        function renderDownloadLabel() {
+            const format = (state.lastSynthesis?.extension ?? "mp3").toUpperCase();
+            document.getElementById("btn-download-mp3").querySelector("span").textContent = t("Download {format}", { format });
         }
 
         function stopAllPlayback() {
@@ -1069,23 +1254,25 @@
             setSynthesizingUI(false, "Playback stopped");
         }
 
-        function setSynthesizingUI(active, message) {
+        function setSynthesizingUI(active, message, values = {}) {
             state.isSynthesizing = active;
+            state.synthesisStatus = { message, values };
+            renderSynthesisStatus();
+        }
+
+        function renderSynthesisStatus() {
+            const { isSynthesizing, synthesisStatus } = state;
             const dot = document.getElementById("status-dot");
             const msgEl = document.getElementById("status-message");
             const stopBtn = document.getElementById("btn-stop");
             const playBtnText = document.getElementById("play-btn-text");
 
-            msgEl.textContent = message;
-            stopBtn.disabled = !active;
-
-            if (active) {
-                dot.className = "w-2 h-2 shrink-0 rounded-full bg-emerald-400 animate-ping";
-                playBtnText.textContent = "重新合成播放";
-            } else {
-                dot.className = "w-2 h-2 shrink-0 rounded-full bg-sky-400";
-                playBtnText.textContent = "生成并播放语音";
-            }
+            msgEl.textContent = t(synthesisStatus.message, synthesisStatus.values);
+            stopBtn.disabled = !isSynthesizing;
+            dot.className = isSynthesizing
+                ? "w-2 h-2 shrink-0 rounded-full bg-emerald-400 animate-ping"
+                : "w-2 h-2 shrink-0 rounded-full bg-sky-400";
+            playBtnText.textContent = t(isSynthesizing ? "Generate and play again" : "Generate and play");
         }
 
         /**
@@ -1184,14 +1371,26 @@
          */
         window.addEventListener("DOMContentLoaded", () => {
             window.lucide?.createIcons();
-            populateLocaleDropdown();
-            renderVoiceList();
+            let storedLanguage;
+            try {
+                storedLanguage = window.localStorage.getItem(languageStorageKey);
+            } catch {
+                // The default language remains available when storage is blocked.
+            }
+            applyUiLanguage(storedLanguage);
+            document.getElementById("ui-language").addEventListener("change", event => {
+                applyUiLanguage(event.target.value);
+                try {
+                    window.localStorage.setItem(languageStorageKey, uiLanguage);
+                } catch {
+                    // Language switching still works for the current page.
+                }
+            });
             renderSampleSelection();
             renderFilterSelection();
             const voiceIdInput = document.getElementById("synthesis-voice-id");
             voiceIdInput.addEventListener("click", () => voiceIdInput.select());
             document.getElementById("btn-copy-voice-id").addEventListener("click", copyVoiceId);
-            document.getElementById("char-counter").textContent = `${document.getElementById("tts-text").value.length} characters`;
             drawIdleWaveform();
 
             window.addEventListener("resize", () => {
@@ -1257,20 +1456,20 @@
                 document.getElementById("val-rate").textContent = "+0%";
                 document.getElementById("val-volume").textContent = "+0%";
                 document.getElementById("val-pitch").textContent = "+0Hz";
-                showToast("已重置语速、音量和音调为默认值", "info");
+                showToast("Speech settings reset.", "info");
             });
 
             // 6. 示例文本快捷填入与字数统计
             const textArea = document.getElementById("tts-text");
             textArea.addEventListener("input", () => {
-                document.getElementById("char-counter").textContent = `${textArea.value.length} characters`;
+                renderCharCount();
                 state.selectedSample = null;
                 renderSampleSelection();
             });
 
             document.getElementById("btn-clear-text").addEventListener("click", () => {
                 textArea.value = "";
-                document.getElementById("char-counter").textContent = "0 characters";
+                renderCharCount();
                 state.selectedSample = null;
                 renderSampleSelection();
             });
@@ -1322,7 +1521,7 @@
                 a.download = `${subtitleVoice?.ShortName ?? "estimated"}_subtitles.vtt`;
                 a.click();
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
-                showToast(synthesis && !synthesis.estimated ? "WebVTT subtitles exported" : "WebVTT exported with estimated timing; timing may differ from the audio", "success");
+                showToast(synthesis && !synthesis.estimated ? "WebVTT subtitles exported" : "WebVTT exported with estimated timing. Timing may differ from the audio.", "success");
             });
 
             // 9. 手动或自动同步云端完整语音列表

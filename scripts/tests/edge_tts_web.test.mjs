@@ -5,8 +5,9 @@ import vm from "node:vm";
 
 const html = readFileSync(new URL("../../edge_tts/index.html", import.meta.url), "utf8");
 const source = html.match(/<script id="edge-tts-app">([\s\S]*?)<\/script>/)[1];
+const chineseMessages = html.match(/<script type="application\/json" id="edge-tts-zh">([\s\S]*?)<\/script>/)[1];
 
-function createApp({ blockPlayback = false, pageUrl = "http://localhost:5173/edge_tts/" } = {}) {
+function createApp({ blockPlayback = false, pageUrl = "http://localhost:5173/edge_tts/", storedLanguage = "en" } = {}) {
     const elements = new Map();
     const groups = new Map();
     const downloads = [];
@@ -57,23 +58,32 @@ function createApp({ blockPlayback = false, pageUrl = "http://localhost:5173/edg
     }
 
     for (const match of html.matchAll(/\bid="([^"]+)"/g)) elements.set(match[1], element());
-    for (const match of html.matchAll(/<button\b([^>]*)>/g)) {
-        const attributes = Object.fromEntries([...match[1].matchAll(/([\w-]+)="([^"]*)"/g)].map(value => [value[1], value[2]]));
-        const button = elements.get(attributes.id) || element("button");
-        button.attributes = attributes;
-        button.className = attributes.class || "";
-        for (const className of button.className.split(" ")) {
-            if (!groups.has(`.${className}`)) groups.set(`.${className}`, []);
-            groups.get(`.${className}`).push(button);
+    const markup = html.slice(0, html.indexOf('<script type="application/json" id="edge-tts-zh">'));
+    for (const [, tag, attributeText] of markup.matchAll(/<(button|input|textarea|select|h2|p|span)\b([^>]*)>/g)) {
+        const attributes = Object.fromEntries([...attributeText.matchAll(/([\w-]+)="([^"]*)"/g)].map(value => [value[1], value[2]]));
+        const item = elements.get(attributes.id) || element(tag);
+        item.attributes = attributes;
+        item.className = attributes.class || "";
+        const selectors = Object.keys(attributes).filter(key => key.startsWith("data-i18n")).map(key => `[${key}]`);
+        if (tag === "button") selectors.push(...item.className.split(" ").map(name => `.${name}`));
+        for (const selector of selectors) {
+            if (!groups.has(selector)) groups.set(selector, []);
+            groups.get(selector).push(item);
         }
     }
+    elements.get("edge-tts-zh").textContent = chineseMessages;
     elements.get("tts-text").value = html.match(/<textarea[^>]*id="tts-text"[^>]*>([\s\S]*?)<\/textarea>/)[1];
     elements.get("locale-filter").value = "ALL";
     const context = vm.createContext({
         Blob, URL, AbortController, AbortSignal, DOMException, Uint8Array, atob,
         setTimeout() {}, requestAnimationFrame() { return 1; }, cancelAnimationFrame() {},
-        window: { location: new URL(pageUrl), addEventListener(name, handler) { if (name === "DOMContentLoaded") initialize = handler; } },
+        window: {
+            location: new URL(pageUrl),
+            localStorage: { getItem() { return storedLanguage; }, setItem(_, value) { storedLanguage = value; } },
+            addEventListener(name, handler) { if (name === "DOMContentLoaded") initialize = handler; }
+        },
         document: {
+            documentElement: {},
             body: element("body"), createElement: element,
             getElementById(id) { assert.ok(elements.has(id), `Unknown element: ${id}`); return elements.get(id); },
             querySelectorAll(selector) { return groups.get(selector) || []; }
@@ -400,6 +410,41 @@ test("the synthesis panel shows and copies the current voice ID", async () => {
     app.context.window.navigator.clipboard = undefined;
     await copyButton.click();
     assert.equal(selected, true);
+    app.cleanup();
+});
+
+test("the interface defaults to Chinese and switching languages keeps the synthesis state", async () => {
+    const app = createApp({ storedLanguage: null });
+    const language = app.elements.get("ui-language");
+    const search = app.elements.get("voice-search");
+    const text = app.elements.get("tts-text");
+    assert.equal(app.context.document.documentElement.lang, "zh-CN");
+    assert.equal(search.getAttribute("aria-label"), "搜索音色");
+    assert.match(app.elements.get("status-message").textContent, /就绪/);
+
+    search.value = "英语";
+    search.handlers.input({ target: search });
+    text.value = "Keep this text.";
+    text.handlers.input();
+    const voice = app.run("state.selectedVoice.ShortName");
+    assert.equal(voice, "en-US-AvaNeural");
+    app.context.fetch = async () => ({ ok: false, status: 502, json: async () => ({
+        error: "The Microsoft speech service could not synthesize the selected voice."
+    }) });
+    await app.elements.get("btn-synthesize").click();
+    assert.match(app.elements.get("status-message").textContent, /微软语音服务无法合成/);
+
+    language.value = "en";
+    language.handlers.change({ target: language });
+    assert.equal(app.context.document.documentElement.lang, "en");
+    assert.equal(app.context.window.localStorage.getItem(), "en");
+    assert.equal(search.getAttribute("aria-label"), "Search voices");
+    assert.equal(search.value, "英语");
+    assert.equal(text.value, "Keep this text.");
+    assert.equal(app.run("state.selectedVoice.ShortName"), voice);
+    assert.equal(app.elements.get("char-counter").textContent, "15 characters");
+    assert.match(app.elements.get("status-message").textContent, /Synthesis failed for en-US-AvaNeural\. The Microsoft speech service/);
+    assert.match(app.elements.get("toast-container").children.at(-1).textContent, /Synthesis failed for/);
     app.cleanup();
 });
 
