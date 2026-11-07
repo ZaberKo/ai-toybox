@@ -24,11 +24,23 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Run regression tests
-        run: node --test scripts/tests/*.test.mjs
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
 
-      - name: Build site from routes.json
-        run: python3 scripts/build_site.py
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run regression tests
+        run: pnpm test
+
+      - name: Build site with Vite
+        run: pnpm build
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

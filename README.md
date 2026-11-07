@@ -19,30 +19,35 @@ AI Toybox 是一个持续扩充的 AI 小工具实验集合。每个工具围绕
 
 ## 开发与验证
 
-路由写在 [`routes.json`](routes.json) 中，构建脚本为 [`scripts/build_site.py`](scripts/build_site.py)。推送到 `main` 后，GitHub Actions 会先运行回归测试，再构建并发布站点。
+首页和各工具都是 Vite 的独立 HTML 入口，工具列表由 [`routes.json`](routes.json) 维护。使用 Node.js 24 LTS 和 [`package.json`](package.json) 指定的 pnpm 版本。推送到 `main` 后，GitHub Actions 会按 pnpm 锁文件安装依赖，通过 Vitest 回归测试后发布 Vite 构建产物。
 
-运行回归测试：
-
-```bash
-node --test scripts/tests/*.test.mjs
-```
-
-本地构建与预览：
+安装依赖并启动开发服务器：
 
 ```bash
-python3 scripts/build_site.py
-python3 -m http.server -d dist
+pnpm install --frozen-lockfile
+pnpm dev
 ```
+
+运行测试、构建并预览生产版本：
+
+```bash
+pnpm test
+pnpm build
+pnpm preview
+```
+
+开发版从 `/` 打开，生产预览使用 `/ai-toybox/`，与 GitHub Pages 的站点路径一致。Python 仅用于执行 Edge TTS 生成示例的专项测试，未安装时 Vitest 会跳过该用例。
 
 ## 加工具
 
-在 `routes.json` 加一条 `url_name: path`：
+把工具页面放在对应目录的 `index.html`，然后在 `routes.json` 添加目录名和入口文件。例如：
 
 ```json
 {
-  "keyboard_test": "keyboard_test/keyboard_test.html",
-  "edge_tts": "edge_tts_dashboard/edge_tts_web.html"
+  "keyboard_test": "keyboard_test/index.html",
+  "edge_tts": "edge_tts/index.html",
+  "my_tool": "my_tool/index.html"
 }
 ```
 
-`url_name` 是网址，`path` 是页面文件。发布后从 `https://zaberko.github.io/ai-toybox/<url_name>/` 打开。页面所在目录里的样式、脚本和图片会一起发布。
+发布后可从 [AI Toybox 首页](https://zaberko.github.io/ai-toybox/)打开新工具。工具使用的样式、模块脚本和图片可以在页面中直接引用，由 Vite 处理。需按原路径发布的静态文件可放到 `public/`。

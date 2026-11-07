@@ -2,12 +2,13 @@ import assert from "node:assert/strict";
 import { webcrypto } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
-import test from "node:test";
+import { test } from "vitest";
 import vm from "node:vm";
 
-const html = readFileSync(new URL("../../edge_tts_dashboard/edge_tts_web.html", import.meta.url), "utf8");
+const html = readFileSync(new URL("../../edge_tts/index.html", import.meta.url), "utf8");
 const source = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].at(-1)[1];
 const flush = async () => { for (let index = 0; index < 12; index++) await Promise.resolve(); };
+const hasPython = spawnSync("python3", ["--version"], { stdio: "ignore" }).status === 0;
 
 function createApp({ voices = [], blockPlayback = false } = {}) {
     const elements = new Map();
@@ -398,7 +399,7 @@ test("generated shell commands preserve text without expanding substitutions", (
     app.cleanup();
 });
 
-test("generated Python executes against the current subtitle API and preserves text", () => {
+test.skipIf(!hasPython)("generated Python executes against the current subtitle API and preserves text", () => {
     const app = createApp();
     for (const includeSubs of [true, false]) {
         const text = "Quotes: ' and \"; path: C:\\new\\test\nTrailing slash: \\";

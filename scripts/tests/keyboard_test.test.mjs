@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import test from "node:test";
+import { test } from "vitest";
 import vm from "node:vm";
 
-const html = readFileSync(new URL("../../keyboard_test/keyboard_test.html", import.meta.url), "utf8");
+const html = readFileSync(new URL("../../keyboard_test/index.html", import.meta.url), "utf8");
 const source = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].at(-1)[1];
 
 function createApp() {
