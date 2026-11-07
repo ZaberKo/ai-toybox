@@ -19,7 +19,7 @@ AI Toybox 是一个持续扩充的 AI 小工具实验集合。每个工具围绕
 
 ## 开发与验证
 
-首页和各工具都是 Vite 的独立 HTML 入口，工具列表由 [`routes.json`](routes.json) 维护。使用 Node.js 24 LTS 和 [`package.json`](package.json) 指定的 pnpm 版本。推送到 `main` 后，GitHub Actions 会按 pnpm 锁文件安装依赖，通过 Vitest 回归测试后发布 Vite 构建产物。
+首页和各工具都是 Vite 的独立 HTML 入口，工具列表由 [`routes.json`](routes.json) 维护。建议使用与 CI 一致的 Node.js 26 LTS 和 [`package.json`](package.json) 指定的 pnpm 版本。推送到 `main` 后，GitHub Actions 会按 pnpm 锁文件安装依赖，通过 Vitest 回归测试后发布 Vite 构建产物。
 
 安装依赖并启动开发服务器：
 
