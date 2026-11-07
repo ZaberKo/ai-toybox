@@ -164,18 +164,20 @@ test("a synthesis service error is shown for the selected voice without fallback
     app.cleanup();
 });
 
-test("catalog refresh keeps the selected voice and text when the voice is no longer listed", async () => {
+test("catalog refresh replaces an unlisted voice with the first candidate and preserves manual text", async () => {
     const app = createApp();
     app.run('selectVoice({ShortName: "zh-CN-RemovedNeural", Locale: "zh-CN", Gender: "Female"}, false);');
-    app.elements.get("tts-text").value = "Keep this text";
+    const text = app.elements.get("tts-text");
+    text.value = "Keep this text";
+    text.handlers.input();
     app.elements.get("locale-filter").value = "zh-CN";
     app.context.fetch = async () => ({ ok: true, json: async () => [
         { ShortName: "en-US-AvaNeural", FriendlyName: "Microsoft Ava Online (Natural)", Locale: "en-US", Gender: "Female" }
     ] });
     await app.syncVoices();
-    assert.equal(app.run("state.selectedVoice.ShortName"), "zh-CN-RemovedNeural");
+    assert.equal(app.run("state.selectedVoice.ShortName"), "en-US-AvaNeural");
     assert.equal(app.run("state.filterLocale"), "ALL");
-    assert.equal(app.elements.get("current-selected-badge").textContent, "zh-CN-RemovedNeural");
+    assert.equal(app.elements.get("current-selected-badge").textContent, "en-US-AvaNeural");
     assert.ok(app.elements.get("toast-container").children.some(toast => toast.textContent.includes("missing from the refreshed catalog")));
     assert.equal(app.elements.get("tts-text").value, "Keep this text");
     app.cleanup();
@@ -300,6 +302,79 @@ test("clearing filters resets both their state and pressed indicators", () => {
     assert.equal(active(categories).getAttribute("data-cat"), "ALL");
     assert.equal(search.value, "");
     assert.ok(app.elements.get("filtered-count").textContent > 0);
+    assert.equal(app.run("state.selectedVoice.ShortName"), "zh-CN-XiaoxiaoNeural");
+    app.cleanup();
+});
+
+test("every filter chooses its first visible voice and synthesis sends that voice", async () => {
+    const app = createApp();
+    const list = app.elements.get("voice-list-container");
+    const assertFirstVoice = expected => {
+        const cards = [...list.innerHTML.matchAll(/data-voice="([^"]+)" aria-pressed="([^"]+)"/g)];
+        assert.deepEqual(cards[0].slice(1), [expected, "true"]);
+        assert.ok(cards.slice(1).every(card => card[2] === "false"));
+        assert.equal(app.elements.get("current-selected-badge").textContent, expected);
+        assert.equal(app.run("state.selectedVoice.ShortName"), expected);
+    };
+    const locale = app.elements.get("locale-filter");
+    locale.value = "en-US";
+    locale.handlers.change({ target: locale });
+    assertFirstVoice("en-US-AvaNeural");
+    assert.equal(app.run("state.selectedSample"), "en");
+
+    app.run('selectVoice(state.voices.find(voice => voice.ShortName === "en-US-EmmaNeural"))');
+    const text = app.elements.get("tts-text");
+    text.value = "Keep my own input.";
+    text.handlers.input();
+    const search = app.elements.get("voice-search");
+    search.value = "en-US";
+    search.handlers.input({ target: search });
+    assertFirstVoice("en-US-AvaNeural");
+    assert.equal(text.value, "Keep my own input.");
+
+    app.groups.get(".gender-btn").find(button => button.getAttribute("data-gender") === "Male").click();
+    assertFirstVoice("en-US-GuyNeural");
+    app.groups.get(".cat-chip").find(button => button.getAttribute("data-cat") === "Multilingual").click();
+    assertFirstVoice("en-US-AndrewMultilingualNeural");
+    const requests = [];
+    app.context.fetch = async (_, options) => {
+        const { voice } = JSON.parse(options.body);
+        requests.push(voice);
+        return audioResponse(voice);
+    };
+    await app.elements.get("btn-synthesize").click();
+    assert.deepEqual(requests, ["en-US-AndrewMultilingualNeural"]);
+    app.cleanup();
+});
+
+test("empty results clear selection and cancel pending audio without sending another request", async () => {
+    const app = createApp();
+    let signal;
+    let reply;
+    let requests = 0;
+    app.context.fetch = (_, options) => {
+        requests++;
+        if (requests !== 1) return Promise.resolve(audioResponse("zh-CN-XiaoxiaoNeural"));
+        signal = options.signal;
+        return new Promise(resolve => { reply = resolve; });
+    };
+    const pending = app.elements.get("btn-synthesize").click();
+    const search = app.elements.get("voice-search");
+    search.value = "no matching voice";
+    search.handlers.input({ target: search });
+    assert.equal(signal.aborted, true);
+    assert.equal(app.run("state.selectedVoice"), null);
+    assert.equal(app.elements.get("current-selected-badge").textContent, "No voice selected");
+    reply(audioResponse("zh-CN-XiaoxiaoNeural"));
+    await pending;
+    await app.elements.get("btn-synthesize").click();
+    assert.equal(requests, 1);
+    assert.equal(app.run("state.lastAudioBlobUrl"), null);
+    assert.match(app.elements.get("status-message").textContent, /No voice matches the current filters/);
+    assert.ok(app.elements.get("toast-container").children.some(toast => toast.textContent.includes("No voice matches the current filters")));
+    app.elements.get("btn-download-vtt").click();
+    assert.equal(app.downloads[0].download, "estimated_subtitles.vtt");
+    URL.revokeObjectURL(app.downloads[0].href);
     app.cleanup();
 });
 

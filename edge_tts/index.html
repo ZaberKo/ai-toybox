@@ -599,20 +599,23 @@
             if (language === "en" || language === "ja") return language;
         }
 
+        const noMatchingVoiceMessage = "No voice matches the current filters.";
+
         function selectVoice(voice, syncSample = true) {
-            if (state.selectedVoice.ShortName !== voice.ShortName) {
+            const shortName = voice?.ShortName;
+            if (state.selectedVoice?.ShortName !== shortName) {
                 stopAllPlayback();
                 clearAudioResult();
-                setSynthesizingUI(false, `Ready to synthesize ${voice.ShortName}`);
+                setSynthesizingUI(false, voice ? `Ready to synthesize ${shortName}` : noMatchingVoiceMessage);
             }
             state.selectedVoice = voice;
-            document.getElementById("current-selected-badge").textContent = voice.ShortName;
-            if (syncSample) {
+            document.getElementById("current-selected-badge").textContent = shortName ?? "No voice selected";
+            if (voice && syncSample) {
                 const sampleKey = sampleForLocale(voice.Locale);
                 if (sampleKey) setSampleText(sampleKey);
             }
             document.querySelectorAll(".voice-card").forEach(card => {
-                card.setAttribute("aria-pressed", String(card.getAttribute("data-voice") === voice.ShortName));
+                card.setAttribute("aria-pressed", String(card.getAttribute("data-voice") === shortName));
             });
         }
 
@@ -687,7 +690,7 @@
         }
 
         // Render the filtered voice catalog.
-        function renderVoiceList() {
+        function renderVoiceList({ selectFirst = false } = {}) {
             const container = document.getElementById("voice-list-container");
             const search = state.filterSearch.trim().toLowerCase();
 
@@ -711,6 +714,12 @@
             });
 
             document.getElementById("filtered-count").textContent = filtered.length;
+            const previousVoice = state.selectedVoice;
+            const retainedVoice = selectFirst ? null : filtered.find(voice => voice.ShortName === previousVoice?.ShortName);
+            const nextVoice = retainedVoice ?? filtered[0] ?? null;
+            const syncSample = state.selectedSample !== null && nextVoice?.ShortName !== previousVoice?.ShortName;
+            selectVoice(nextVoice, syncSample);
+            if (selectFirst) container.scrollTop = 0;
 
             if (filtered.length === 0) {
                 container.innerHTML = `
@@ -728,14 +737,14 @@
                     searchInput.value = "";
                     document.getElementById("locale-filter").value = "ALL";
                     renderFilterSelection();
-                    renderVoiceList();
+                    renderVoiceList({ selectFirst: true });
                     searchInput.focus();
                 });
                 return;
             }
 
             container.innerHTML = filtered.map(v => {
-                const isSelected = state.selectedVoice.ShortName === v.ShortName;
+                const isSelected = nextVoice.ShortName === v.ShortName;
                 const genderBadge = v.Gender === "Female" 
                     ? `<span class="px-1.5 py-0.5 rounded text-[10px] bg-pink-500/15 text-pink-300 border border-pink-500/25">♀ 女声</span>`
                     : `<span class="px-1.5 py-0.5 rounded text-[10px] bg-blue-500/15 text-blue-300 border border-blue-500/25">♂ 男声</span>`;
@@ -812,11 +821,11 @@
                 if (!voices.length) throw new Error("The Edge voice catalog is empty");
                 const selected = state.selectedVoice;
                 state.voices = voices;
-                const refreshedVoice = state.voices.find(voice => voice.ShortName === selected.ShortName);
                 populateLocaleDropdown();
-                selectVoice(refreshedVoice || selected, false);
                 renderVoiceList();
-                if (!refreshedVoice) showToast(`${selected.ShortName} is missing from the refreshed catalog. Your selection is unchanged.`, "warning");
+                if (selected && !voices.some(voice => voice.ShortName === selected.ShortName)) {
+                    showToast(`${selected.ShortName} is missing from the refreshed catalog.`, "warning");
+                }
                 showToast(`Edge voice catalog refreshed (${state.voices.length} voices)`, "success");
                 text.textContent = `Synced (${state.voices.length})`;
             } catch (err) {
@@ -902,6 +911,12 @@
 
         // Only the current request may publish results.
         async function handleSynthesizeAndPlay() {
+            const voice = state.selectedVoice;
+            if (!voice) {
+                setSynthesizingUI(false, noMatchingVoiceMessage);
+                showToast(noMatchingVoiceMessage, "error");
+                return;
+            }
             const text = document.getElementById("tts-text").value.trim();
             if (!text) {
                 showToast("Enter text to synthesize.", "warning");
@@ -913,7 +928,6 @@
             const controller = new AbortController();
             const { signal } = controller;
             state.synthesisController = controller;
-            const voice = { ...state.selectedVoice };
             const { rate, volume, pitch } = state;
             const synthesis = { text, voice, rate, volume, pitch, estimated: true, extension: null };
             const rateStr = formatSignedParam(rate, "%");
@@ -1148,12 +1162,12 @@
             // 1. 搜索框与语言筛选事件
             document.getElementById("voice-search").addEventListener("input", (e) => {
                 state.filterSearch = e.target.value;
-                renderVoiceList();
+                renderVoiceList({ selectFirst: true });
             });
 
             document.getElementById("locale-filter").addEventListener("change", (e) => {
                 state.filterLocale = e.target.value;
-                renderVoiceList();
+                renderVoiceList({ selectFirst: true });
             });
 
             // 2. 性别切换按钮
@@ -1161,7 +1175,7 @@
                 btn.addEventListener("click", () => {
                     state.filterGender = btn.getAttribute("data-gender");
                     renderFilterSelection();
-                    renderVoiceList();
+                    renderVoiceList({ selectFirst: true });
                 });
             });
 
@@ -1170,7 +1184,7 @@
                 chip.addEventListener("click", () => {
                     state.filterCategory = chip.getAttribute("data-cat");
                     renderFilterSelection();
-                    renderVoiceList();
+                    renderVoiceList({ selectFirst: true });
                 });
             });
 
@@ -1265,7 +1279,8 @@
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
                 a.href = url;
-                a.download = `${(synthesis ? synthesis.voice : state.selectedVoice).ShortName}_subtitles.vtt`;
+                const subtitleVoice = synthesis?.voice ?? state.selectedVoice;
+                a.download = `${subtitleVoice?.ShortName ?? "estimated"}_subtitles.vtt`;
                 a.click();
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
                 showToast(synthesis && !synthesis.estimated ? "WebVTT subtitles exported" : "WebVTT exported with estimated timing; timing may differ from the audio", "success");
