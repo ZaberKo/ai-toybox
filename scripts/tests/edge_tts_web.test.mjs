@@ -106,10 +106,11 @@ function createApp({ voices = [], blockPlayback = false } = {}) {
     });
     vm.runInContext(source, context);
     const run = code => vm.runInContext(code, context);
+    const syncVoices = run("syncAllCloudVoices");
     run('syncAllCloudVoices = async () => {}; generateSecMsGec = async () => "test_token";');
     initialize();
     return {
-        context, elements, speech, sockets, downloads, groups, run,
+        context, elements, speech, sockets, downloads, groups, run, syncVoices,
         advance(milliseconds) {
             const target = now + milliseconds;
             while (true) {
@@ -132,7 +133,7 @@ function finishSocket(socket) {
 
 test("sample selection preserves unmatched languages and manual text", () => {
     const app = createApp();
-    for (const [name, key] of [["zh-HK-HiuGaaiNeural", "hk"], ["en-US-AriaNeural", "en"], ["ja-JP-NanamiNeural", "ja"], ["zh-CN-XiaoxiaoNeural", "zh"], ["zh-CN-XiaoxiaoMultilingualNeural", "multi"]]) {
+    for (const [name, key] of [["zh-HK-HiuGaaiNeural", "hk"], ["en-US-AriaNeural", "en"], ["ja-JP-NanamiNeural", "ja"], ["zh-CN-XiaoxiaoNeural", "zh"], ["en-US-AvaMultilingualNeural", "multi"]]) {
         app.run(`selectVoice(state.voices.find(voice => voice.ShortName === ${JSON.stringify(name)}))`);
         assert.equal(app.run("state.selectedSample"), key);
         assert.equal(app.elements.get("tts-text").value, app.run(`SAMPLE_TEXTS[${JSON.stringify(key)}]`));
@@ -226,10 +227,76 @@ test("voice matching distinguishes gender words and does not substitute Mandarin
     app.context.candidates = [{ name: "System Female", lang: "zh-CN" }];
     assert.equal(app.run('findBestBrowserVoice(candidates, { Locale: "zh-CN-liaoning", ShortName: "zh-CN-liaoning-XiaobeiNeural", Gender: "Female" })'), null);
     assert.equal(app.run('findBestBrowserVoice(candidates, { Locale: "zh-HK", ShortName: "zh-HK-HiuGaaiNeural", Gender: "Female" })'), null);
+    app.context.candidates = [{ name: "Microsoft Yunxi Online (Natural)", lang: "zh-CN" }];
+    assert.equal(app.run('findBestBrowserVoice(candidates, { Locale: "zh-CN-sichuan", ShortName: "zh-CN-sichuan-YunxiNeural", Gender: "Male" })'), null);
     app.context.candidates = [{ name: "System Male", lang: "en-US" }];
     assert.equal(app.run('findBestBrowserVoice(candidates, { Locale: "en-US", ShortName: "en-US-JennyNeural", Gender: "Female" })'), null);
     app.context.candidates = [{ name: "Bulgarian Voice", lang: "en-US" }];
     assert.equal(app.run('findBestBrowserVoice(candidates, { Locale: "en-US", ShortName: "en-US-JennyNeural", Gender: "Female" })'), null);
+    app.cleanup();
+});
+
+test("installed system voices support Ava, other genders, and regional aliases", () => {
+    const app = createApp();
+    for (const [voice, name, lang] of [
+        ["en-US-AvaNeural", "Samantha", "en-US"],
+        ["en-US-EmmaNeural", "Microsoft Zira Desktop - English (United States)", "en_US"],
+        ["en-US-GuyNeural", "Microsoft David - English (United States)", "en-US"],
+        ["ja-JP-NanamiNeural", "Kyoko", "ja-JP"],
+        ["zh-CN-XiaoxiaoNeural", "Tingting", "zh-Hans-CN"],
+        ["zh-HK-HiuGaaiNeural", "Sin-Ji", "yue-Hant-HK"]
+    ]) {
+        app.context.candidates = [{ name, lang, localService: true }];
+        const target = app.run(`state.voices.find(voice => voice.ShortName === ${JSON.stringify(voice)})`);
+        app.context.target = target;
+        assert.equal(app.run("findBestBrowserVoice(candidates, target).name"), name);
+        app.context.candidates[0].localService = false;
+        assert.equal(app.run("findBestBrowserVoice(candidates, target)"), null);
+    }
+    app.context.candidates = [
+        { name: "Microsoft Ava Online (Natural)", lang: "en-US", default: true },
+        { name: "Microsoft Ava Multilingual Online (Natural)", lang: "en-US" }
+    ];
+    assert.match(app.run('findBestBrowserVoice(candidates, state.voices.find(voice => voice.ShortName === "en-US-AvaMultilingualNeural")).name'), /Multilingual/);
+    app.cleanup();
+});
+
+test("unclassified voices require explicit same-locale preview selection", async () => {
+    const app = createApp({ voices: [
+        { name: "Voice without metadata", lang: "en-US", voiceURI: "voice-1" },
+        { name: "Different region", lang: "en-GB", voiceURI: "voice-2" },
+        { name: "Remote voice", lang: "en-US", voiceURI: "voice-3", localService: false }
+    ] });
+    app.run('selectVoice(state.voices.find(voice => voice.ShortName === "en-US-AvaNeural")); synthesizeViaEdgeWebSocket = async () => { throw new Error("Edge connection failed"); };');
+    await app.run("handleSynthesizeAndPlay()");
+    assert.equal(app.speech.spoken.length, 0);
+    assert.equal(app.run("state.localPreviewVoices.length"), 1);
+    assert.match(app.elements.get("status-message").textContent, /Edge connection failed.*No verified local female match/);
+    app.speech.voices = app.speech.voices.map(voice => ({ ...voice }));
+    app.elements.get("btn-preview-local").click();
+    await flush();
+    assert.equal(app.speech.spoken[0].voice.voiceURI, "voice-1");
+    assert.match(app.elements.get("status-message").textContent, /Local preview: Voice without metadata/);
+    assert.equal(app.elements.get("btn-download-mp3").disabled, true);
+    app.speech.spoken[0].onend();
+    app.run('selectVoice(state.voices.find(voice => voice.ShortName === "ja-JP-NanamiNeural"));');
+    assert.equal(app.run("state.localPreviewVoices.length"), 0);
+    app.cleanup();
+});
+
+test("catalog refresh replaces unavailable selections without overwriting custom text", async () => {
+    const app = createApp();
+    app.run('selectVoice({ShortName: "zh-CN-RemovedNeural", Locale: "zh-CN", Gender: "Female"}, false);');
+    app.elements.get("tts-text").value = "Keep this text";
+    app.elements.get("locale-filter").value = "zh-CN";
+    app.context.fetch = async () => ({ ok: true, json: async () => [
+        { ShortName: "en-US-AvaNeural", FriendlyName: "Microsoft Ava Online (Natural)", Locale: "en-US", Gender: "Female" }
+    ] });
+    await app.syncVoices();
+    assert.equal(app.run("state.selectedVoice.ShortName"), "en-US-AvaNeural");
+    assert.equal(app.run("state.filterLocale"), "ALL");
+    assert.match(app.elements.get("code-preview-content").textContent, /en-US-AvaNeural/);
+    assert.equal(app.elements.get("tts-text").value, "Keep this text");
     app.cleanup();
 });
 
@@ -255,7 +322,7 @@ test("missing local dialects fail instead of silently using a default voice", as
     app.run('selectVoice(state.voices.find(voice => voice.Locale === "zh-HK")); synthesizeViaEdgeWebSocket = async () => { throw new Error("Origin blocked"); }');
     await app.run("handleSynthesizeAndPlay()");
     assert.equal(app.speech.spoken.length, 0);
-    assert.match(app.elements.get("status-message").textContent, /No local female voice matches zh-HK/);
+    assert.match(app.elements.get("status-message").textContent, /No local voice is available for zh-HK/);
     assert.equal(app.run("state.isSynthesizing"), false);
     app.cleanup();
 });

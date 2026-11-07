@@ -267,6 +267,12 @@
                             <span class="text-[11px] text-emerald-400 font-mono" id="engine-status-tag">Edge TTS</span>
                         </div>
                         <p class="text-xs text-slate-300">优先使用 Edge TTS；浏览器限制连接时尝试本地语音，无需 API Key。</p>
+                        <div id="local-preview-options" class="hidden mt-2 space-y-2">
+                            <label for="local-preview-voice" class="block text-xs text-slate-300">Choose a local voice for preview</label>
+                            <select id="local-preview-voice" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-xs"></select>
+                            <button type="button" id="btn-preview-local" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-sky-300">Play local preview</button>
+                            <p class="text-[11px] text-slate-400">Local preview uses the named voice and cannot export MP3.</p>
+                        </div>
                     </div>
 
                     <!-- 字幕与输出文件配置 (对应 edge-tts --write-media / --write-subtitles) -->
@@ -415,22 +421,11 @@
             { ShortName: "zh-CN-YunjianNeural", FriendlyName: "云健 (Yunjian) - 激情体育/影视解说", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Male", Categories: ["Sports", "Novel"], Personalities: ["Passion", "Powerful"] },
             { ShortName: "zh-CN-XiaoyiNeural", FriendlyName: "晓伊 (Xiaoyi) - 活泼动漫/小说女声", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Female", Categories: ["Cartoon", "Novel"], Personalities: ["Cute", "Bright"] },
             { ShortName: "zh-CN-YunyangNeural", FriendlyName: "云扬 (Yunyang) - 专业新闻播音男声", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Male", Categories: ["News"], Personalities: ["Professional", "Reliable"] },
-            { ShortName: "zh-CN-XiaoxiaoMultilingualNeural", FriendlyName: "晓晓多语言 (Xiaoxiao Multilingual)", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Female", Categories: ["Multilingual", "Conversation"], Personalities: ["Warm", "Polyglot"] },
             { ShortName: "zh-CN-YunxiaNeural", FriendlyName: "云夏 (Yunxia) - 可爱正太童声", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Male", Categories: ["Cartoon", "Novel"], Personalities: ["Child", "Cute"] },
-            { ShortName: "zh-CN-XiaohanNeural", FriendlyName: "晓涵 (Xiaohan) - 温柔知性女声", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Female", Categories: ["General", "Novel"], Personalities: ["Gentle", "Warm"] },
-            { ShortName: "zh-CN-XiaomengNeural", FriendlyName: "晓梦 (Xiaomeng) - 甜美梦幻女声", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Female", Categories: ["Novel", "Conversation"], Personalities: ["Sweet"] },
-            { ShortName: "zh-CN-XiaomoNeural", FriendlyName: "晓墨 (Xiaomo) - 情感丰富故事女声", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Female", Categories: ["Novel"], Personalities: ["Expressive"] },
-            { ShortName: "zh-CN-XiaoruiNeural", FriendlyName: "晓睿 (Xiaorui) - 沉稳老年女声", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Female", Categories: ["Novel"], Personalities: ["Calm", "Senior"] },
-            { ShortName: "zh-CN-XiaoshuangNeural", FriendlyName: "晓双 (Xiaoshuang) - 灵动女童声", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Female", Categories: ["Cartoon"], Personalities: ["Child", "Cute"] },
-            { ShortName: "zh-CN-YunfengNeural", FriendlyName: "云枫 (Yunfeng) - 磁性成熟男声", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Male", Categories: ["Novel"], Personalities: ["Magnetic", "Mature"] },
-            { ShortName: "zh-CN-YunhaoNeural", FriendlyName: "云皓 (Yunhao) - 广告宣传片男声", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Male", Categories: ["Commercial"], Personalities: ["Energetic"] },
-            { ShortName: "zh-CN-YunzeNeural", FriendlyName: "云泽 (Yunze) - 纪录片/沉稳叔音", Locale: "zh-CN", LocaleName: "中文 (中国大陆)", Gender: "Male", Categories: ["Documentary", "News"], Personalities: ["Deep", "Mature"] },
 
             // 中文特色方言
             { ShortName: "zh-CN-liaoning-XiaobeiNeural", FriendlyName: "晓北 (Xiaobei) - 东北话幽默女声", Locale: "zh-CN-liaoning", LocaleName: "中文 (东北官话·辽宁)", Gender: "Female", Categories: ["Dialect", "Conversation"], Personalities: ["Humorous", "Friendly"] },
             { ShortName: "zh-CN-shaanxi-XiaoniNeural", FriendlyName: "晓妮 (Xiaoni) - 陕西话特色女声", Locale: "zh-CN-shaanxi", LocaleName: "中文 (中原官话·陕西)", Gender: "Female", Categories: ["Dialect", "Conversation"], Personalities: ["Bright", "Local"] },
-            { ShortName: "zh-CN-shandong-YunxiangNeural", FriendlyName: "云翔 (Yunxiang) - 山东话豪爽男声", Locale: "zh-CN-shandong", LocaleName: "中文 (冀鲁官话·山东)", Gender: "Male", Categories: ["Dialect", "Novel"], Personalities: ["Direct", "Warm"] },
-            { ShortName: "zh-CN-sichuan-YunxiNeural", FriendlyName: "云希四川 (Yunxi Sichuan) - 四川话男声", Locale: "zh-CN-sichuan", LocaleName: "中文 (西南官话·四川)", Gender: "Male", Categories: ["Dialect", "Conversation"], Personalities: ["Lively"] },
 
             // 粤语与台湾国语
             { ShortName: "zh-HK-HiuMaanNeural", FriendlyName: "曉曼 (HiuMaan) - 粤语自然女声", Locale: "zh-HK", LocaleName: "中文 (中国香港·粤语)", Gender: "Female", Categories: ["Dialect", "Conversation"], Personalities: ["Friendly", "Positive"] },
@@ -441,6 +436,8 @@
             { ShortName: "zh-TW-HsiaoYuNeural", FriendlyName: "曉雨 (HsiaoYu) - 台湾国语甜美女声", Locale: "zh-TW", LocaleName: "中文 (中国台湾·国语)", Gender: "Female", Categories: ["Conversation"], Personalities: ["Sweet"] },
 
             // 英语 (美国、英国、澳洲、印度等)
+            { ShortName: "en-US-AvaNeural", FriendlyName: "Ava - English (United States)", Locale: "en-US", LocaleName: "English (United States)", Gender: "Female", Categories: ["Conversation", "Copilot"], Personalities: [] },
+            { ShortName: "en-US-EmmaNeural", FriendlyName: "Emma - English (United States)", Locale: "en-US", LocaleName: "English (United States)", Gender: "Female", Categories: ["Conversation", "Copilot"], Personalities: [] },
             { ShortName: "en-US-AriaNeural", FriendlyName: "Aria - 美式自然全能女声", Locale: "en-US", LocaleName: "English (United States)", Gender: "Female", Categories: ["News", "Novel", "Conversation"], Personalities: ["Positive", "Confident"] },
             { ShortName: "en-US-GuyNeural", FriendlyName: "Guy - 美式新闻与叙事男声", Locale: "en-US", LocaleName: "English (United States)", Gender: "Male", Categories: ["News", "Novel"], Personalities: ["Passion"] },
             { ShortName: "en-US-JennyNeural", FriendlyName: "Jenny - 美式亲切助手女声", Locale: "en-US", LocaleName: "English (United States)", Gender: "Female", Categories: ["Conversation", "Copilot"], Personalities: ["Friendly", "Considerate"] },
@@ -458,8 +455,6 @@
             // 日语 (日本)
             { ShortName: "ja-JP-NanamiNeural", FriendlyName: "七海 (Nanami) - 日语元气清晰女声", Locale: "ja-JP", LocaleName: "日本語 (日本)", Gender: "Female", Categories: ["Conversation", "Cartoon"], Personalities: ["Friendly", "Positive"] },
             { ShortName: "ja-JP-KeitaNeural", FriendlyName: "圭太 (Keita) - 日语温和青年男声", Locale: "ja-JP", LocaleName: "日本語 (日本)", Gender: "Male", Categories: ["Conversation", "Novel"], Personalities: ["Friendly", "Positive"] },
-            { ShortName: "ja-JP-AoiNeural", FriendlyName: "葵 (Aoi) - 日语可爱动漫女声", Locale: "ja-JP", LocaleName: "日本語 (日本)", Gender: "Female", Categories: ["Cartoon", "Novel"], Personalities: ["Cute"] },
-            { ShortName: "ja-JP-DaichiNeural", FriendlyName: "大地 (Daichi) - 日语沉稳男声", Locale: "ja-JP", LocaleName: "日本語 (日本)", Gender: "Male", Categories: ["Novel"], Personalities: ["Calm"] },
 
             // 韩语 (韩国)
             { ShortName: "ko-KR-SunHiNeural", FriendlyName: "선희 (SunHi) - 韩语温柔标准女声", Locale: "ko-KR", LocaleName: "한국어 (대한민국)", Gender: "Female", Categories: ["Conversation", "News"], Personalities: ["Friendly", "Positive"] },
@@ -581,6 +576,7 @@
             lastSynthesis: null,
             synthesisController: null,
             currentUtterance: null,
+            localPreviewVoices: [],
             subtitlesCueList: [],
             animationId: null
         };
@@ -605,6 +601,7 @@
         }
 
         function selectVoice(voice, syncSample = true) {
+            if (state.selectedVoice.ShortName !== voice.ShortName) setLocalPreviewOptions([]);
             state.selectedVoice = voice;
             document.getElementById("current-selected-badge").textContent = voice.ShortName;
             if (syncSample) {
@@ -674,9 +671,8 @@
                 select.appendChild(option);
             });
 
-            if (sortedLocales.includes(currentVal)) {
-                select.value = currentVal;
-            }
+            state.filterLocale = sortedLocales.includes(currentVal) ? currentVal : "ALL";
+            select.value = state.filterLocale;
 
             document.getElementById("stat-locales").textContent = sortedLocales.length;
             document.getElementById("stat-voices").textContent = state.voices.length;
@@ -845,24 +841,28 @@
                 const res = await fetch(EDGE_VOICES_URL);
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
-                if (Array.isArray(data) && data.length > 0) {
-                    state.voices = data.map(item => ({
-                        ShortName: item.ShortName,
-                        FriendlyName: item.FriendlyName.replace("Microsoft ", "").replace(" Online (Natural)", ""),
-                        Locale: item.Locale,
-                        LocaleName: LOCALE_NAME_MAP[item.Locale] || item.Locale,
-                        Gender: item.Gender,
-                        Categories: item.VoiceTag?.ContentCategories || ["General"],
-                        Personalities: item.VoiceTag?.VoicePersonalities || []
-                    }));
-                    populateLocaleDropdown();
-                    renderVoiceList();
-                    showToast(`成功同步微软云端 ${state.voices.length} 个 Neural 语音！`, "success");
-                    text.textContent = `已同步 (${state.voices.length})`;
-                }
+                if (!Array.isArray(data) || data.length === 0) throw new Error("The Edge voice catalog is empty");
+                const selected = state.selectedVoice;
+                state.voices = data.map(item => ({
+                    ShortName: item.ShortName,
+                    FriendlyName: item.FriendlyName.replace("Microsoft ", "").replace(" Online (Natural)", ""),
+                    Locale: item.Locale,
+                    LocaleName: LOCALE_NAME_MAP[item.Locale] || item.Locale,
+                    Gender: item.Gender,
+                    Categories: item.VoiceTag?.ContentCategories || ["General"],
+                    Personalities: item.VoiceTag?.VoicePersonalities || []
+                }));
+                const refreshedVoice = state.voices.find(voice => voice.ShortName === selected.ShortName);
+                const replacement = state.voices.find(voice => voice.Locale === selected.Locale && voice.Gender === selected.Gender)
+                    || state.voices.find(voice => voice.ShortName === BUILTIN_VOICES[0].ShortName) || state.voices[0];
+                populateLocaleDropdown();
+                selectVoice(refreshedVoice || replacement, false);
+                if (!refreshedVoice) showToast(`${selected.ShortName} is no longer listed. Selected ${replacement.ShortName}.`, "warning");
+                showToast(`Edge voice catalog refreshed (${state.voices.length} voices)`, "success");
+                text.textContent = `Synced (${state.voices.length})`;
             } catch (err) {
-                showToast("浏览器跨域策略限制，已使用内置完整多语言库 (65+ 核心音色)", "warning");
-                text.textContent = "内置核心库";
+                showToast("Could not refresh the Edge voice catalog. The previous list is still available.", "warning");
+                text.textContent = `Voice catalog (${state.voices.length})`;
             } finally {
                 icon.classList.remove("animate-spin");
             }
@@ -898,7 +898,7 @@
             const reqId = generateUUID();
             const secMsGec = await generateSecMsGec();
             signal?.throwIfAborted();
-            const wsUrl = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4&Sec-MS-GEC=${secMsGec}&Sec-MS-GEC-Version=1-130.0.2849.68&ConnectionId=${reqId}`;
+            const wsUrl = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4&Sec-MS-GEC=${secMsGec}&Sec-MS-GEC-Version=2-143.0.3650.75&ConnectionId=${reqId}`;
 
             return new Promise((resolve, reject) => {
                 const ws = new WebSocket(wsUrl);
@@ -986,34 +986,103 @@
             });
         }
 
-        // Require the requested locale or an explicitly named dialect voice.
-        function findBestBrowserVoice(sysVoices, voiceObj) {
-            const targetLocale = voiceObj.Locale.toLowerCase();
-            const shortKey = voiceObj.ShortName.split("-").pop().replace("Neural", "").replace("Multilingual", "");
-            const localeMatches = voice => {
-                const lang = voice.lang.toLowerCase().replace(/_/g, "-");
-                return lang === targetLocale || (targetLocale === "zh-hk" && lang === "yue-hk");
-            };
-            const nameMatches = voice => voice.name.toLowerCase().split(/[^a-z0-9]+/).includes(shortKey.toLowerCase());
-            const exactVoice = sysVoices.find(voice => nameMatches(voice) && (
-                localeMatches(voice) || (targetLocale.startsWith("zh-cn-") && voice.lang.toLowerCase().replace(/_/g, "-") === "zh-cn")
-            ));
-            if (exactVoice) return exactVoice;
+        // Names verified in macOS voice metadata and Microsoft's Narrator voice list.
+        // Each entry lists female names first, followed by male names.
+        const SYSTEM_VOICE_NAMES = {
+            "ar-001": ["hoda", "majed"], "ar-sa": ["", "naayf"],
+            "bg-bg": ["daria", "ivan"], "bn-in": ["piya", ""],
+            "ca-es": ["montse herena", ""], "cs-cz": ["zuzana", "jakub"],
+            "da-dk": ["sara helle", ""], "de-at": ["", "michael"],
+            "de-ch": ["", "karsten"], "de-de": ["anna hedda katja", "stefan"],
+            "el-gr": ["melina", "stefanos"], "en-au": ["karen catherine", "james"],
+            "en-ca": ["linda", "richard"], "en-gb": ["hazel susan", "daniel george"],
+            "en-ie": ["moira", "sean"], "en-in": ["tara heera", "rishi aman ravi"],
+            "en-us": ["samantha zira", "fred david mark"], "en-za": ["tessa", ""],
+            "es-es": ["monica helena laura", "pablo"], "es-mx": ["paulina sabina", "raul"],
+            "fi-fi": ["satu heidi", ""], "fr-ca": ["amelie caroline", "claude"],
+            "fr-ch": ["", "guillaume"], "fr-fr": ["hortence hortense julie", "thomas paul"],
+            "he-il": ["carmit", "asaf"], "hi-in": ["lekha kalpana", "hemant"],
+            "hr-hr": ["lana", "matej"], "hu-hu": ["tunde", "szabolcs"],
+            "id-id": ["damayanti", "andika"], "it-it": ["alice elsa", "cosimo"],
+            "ja-jp": ["kyoko ayumi haruka", "ichiro"], "kk-kz": ["aru", ""],
+            "kn-in": ["soumya", ""], "ko-kr": ["yuna heami", ""],
+            "lt-lt": ["ona", ""], "ms-my": ["amira", "rizwan"],
+            "nb-no": ["nora", "jon"], "nl-be": ["ellen", "bart"],
+            "nl-nl": ["", "xander frank"], "pl-pl": ["zosia paulina", "adam"],
+            "pt-br": ["luciana maria", "daniel"], "pt-pt": ["joana helia", ""],
+            "ro-ro": ["ioana", "andrei"], "ru-ru": ["milena irina", "pavel"],
+            "sk-sk": ["laura", "filip"], "sl-si": ["tina", "lado"],
+            "sv-se": ["alva", "bengt"], "ta-in": ["vani", "valluvar"],
+            "te-in": ["geeta", ""], "th-th": ["kanya", "pattara"],
+            "tr-tr": ["yelda", "tolga"], "uk-ua": ["lesya", ""],
+            "vi-vn": ["linh", "an"], "zh-cn": ["tingting huihui yaoyao", "kangkang"],
+            "zh-hk": ["sinji tracy", "danny"], "zh-tw": ["meijia yating hanhan", "zhiwei"]
+        };
 
-            const femaleNames = ["xiaoxiao", "xiaoyi", "hiumaan", "hiugaai", "hsiaochen", "hsiaoyu", "sin-ji", "sinji", "tracy", "ting-ting", "meijia", "aria", "jenny", "sonia", "nanami", "sunhi", "huihui", "yaoyao", "lili"];
-            const maleNames = ["yunxi", "yunjian", "yunyang", "wanlung", "yunjhe", "kangkang", "danny", "guy", "ryan", "keita", "injoon"];
-            const genderMatches = voice => {
-                const name = voice.name.toLowerCase();
-                const words = name.split(/[^a-z0-9]+/);
-                const normalizedName = ` ${words.join(" ")} `;
-                const female = /\b(female|woman|girl)\b/.test(name) || femaleNames.some(key => normalizedName.includes(` ${key.replace(/-/g, " ")} `)) || name.includes("\u5973");
-                const male = /\b(male|man|boy)\b/.test(name) || maleNames.some(key => words.includes(key)) || name.includes("\u7537");
-                return voiceObj.Gender === "Female" ? female && !male : male && !female;
-            };
-            return sysVoices.find(voice => localeMatches(voice) && genderMatches(voice)) || null;
+        function normalizeSpeechLocale(locale) {
+            const tag = locale.toLowerCase().replace(/_/g, "-");
+            const aliases = { "zh-hans-cn": "zh-cn", "zh-hant-tw": "zh-tw", "zh-hant-hk": "zh-hk", "yue-hk": "zh-hk", "yue-hant-hk": "zh-hk" };
+            return aliases[tag] || tag;
         }
 
-        async function synthesizeViaBrowserSpeech(text, voiceObj, rateVal, volumeVal, pitchVal, signal) {
+        function normalizeVoiceName(name) {
+            return name.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase()
+                .replace(/^(?:microsoft|apple)\s+/, "").split(/\s+(?:\(|-\s)/, 1)[0]
+                .replace(/\s+(?:online|desktop)(?:\s.*)?$/, "").replace(/neural$/, "")
+                .replace(/[^\p{L}\p{N}]/gu, "");
+        }
+
+        function getCompatibleBrowserVoices(sysVoices, voiceObj) {
+            const targetLocale = normalizeSpeechLocale(voiceObj.Locale);
+            return sysVoices.filter(voice => voice.localService !== false && normalizeSpeechLocale(voice.lang) === targetLocale);
+        }
+
+        function findBestBrowserVoice(sysVoices, voiceObj) {
+            const targetLocale = normalizeSpeechLocale(voiceObj.Locale);
+            const getCatalogName = voice => normalizeVoiceName(voice.ShortName.split("-").pop());
+            const exactName = getCatalogName(voiceObj);
+            const catalogGenders = new Map();
+            for (const voice of [...state.voices, voiceObj]) {
+                if (normalizeSpeechLocale(voice.Locale) !== targetLocale) continue;
+                const name = getCatalogName(voice).replace(/multilingual$/, "");
+                const genders = catalogGenders.get(name) || new Set();
+                genders.add(voice.Gender);
+                catalogGenders.set(name, genders);
+            }
+
+            const [femaleNames, maleNames] = SYSTEM_VOICE_NAMES[targetLocale] || ["", ""];
+            const matches = getCompatibleBrowserVoices(sysVoices, voiceObj).filter(voice => {
+                const name = normalizeVoiceName(voice.name).replace(/multilingual$/, "");
+                const genders = catalogGenders.get(name);
+                const female = /\b(female|woman|girl)\b|\u5973/i.test(voice.name) || femaleNames.split(" ").includes(name) || genders?.has("Female");
+                const male = /\b(male|man|boy)\b|\u7537/i.test(voice.name) || maleNames.split(" ").includes(name) || genders?.has("Male");
+                return voiceObj.Gender === "Female" ? female && !male : male && !female;
+            });
+            return matches.find(voice => normalizeVoiceName(voice.name) === exactName)
+                || matches.find(voice => voice.default) || matches[0] || null;
+        }
+
+        function setLocalPreviewOptions(voices) {
+            state.localPreviewVoices = voices;
+            const panel = document.getElementById("local-preview-options");
+            const select = document.getElementById("local-preview-voice");
+            select.innerHTML = "";
+            if (voices.length === 0) {
+                panel.classList.add("hidden");
+                return;
+            }
+            voices.forEach((voice, index) => {
+                const option = document.createElement("option");
+                option.value = String(index);
+                option.textContent = `${voice.name} (${voice.lang})`;
+                select.appendChild(option);
+            });
+            select.value = "0";
+            panel.classList.remove("hidden");
+        }
+
+        async function synthesizeViaBrowserSpeech(synthesis, signal, previewVoice) {
+            const { text, voice: voiceObj, rate, volume, pitch } = synthesis;
             signal?.throwIfAborted();
             if (!("speechSynthesis" in window)) throw new Error("This browser does not support local speech synthesis");
             const speech = window.speechSynthesis;
@@ -1041,18 +1110,34 @@
                 });
             }
             signal?.throwIfAborted();
-            const matchedVoice = findBestBrowserVoice(sysVoices, voiceObj);
-            if (!matchedVoice) throw new Error(`No local ${voiceObj.Gender.toLowerCase()} voice matches ${voiceObj.Locale}. Install a matching voice pack.`);
+            const compatible = getCompatibleBrowserVoices(sysVoices, voiceObj);
+            const matchedVoice = previewVoice
+                ? compatible.find(voice => voice.voiceURI === previewVoice.voiceURI && voice.name === previewVoice.name && voice.lang === previewVoice.lang)
+                : findBestBrowserVoice(sysVoices, voiceObj);
+            if (!matchedVoice) {
+                if (compatible.length) {
+                    if (state.selectedVoice.ShortName === voiceObj.ShortName) setLocalPreviewOptions(compatible);
+                    if (previewVoice) throw new Error("The selected local voice is no longer available. Choose another preview voice.");
+                    throw new Error(`No verified local ${voiceObj.Gender.toLowerCase()} match for ${voiceObj.Locale}. Choose a local preview voice or use the CLI to synthesize ${voiceObj.ShortName}.`);
+                }
+                throw new Error(`No local voice is available for ${voiceObj.Locale}. Use the CLI to synthesize ${voiceObj.ShortName}.`);
+            }
+
+            const voiceLabel = `${matchedVoice.name} (${matchedVoice.lang})`;
+            document.getElementById("engine-status-tag").textContent = "Local preview";
+            setSynthesizingUI(true, `Local preview: ${voiceLabel} for ${voiceObj.ShortName}`);
+            showToast(`Using ${voiceLabel} for local preview. MP3 download is unavailable.`, "info");
 
             return new Promise((resolve, reject) => {
                 speech.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = matchedVoice.lang;
                 utterance.voice = matchedVoice;
-                utterance.rate = Math.max(0.25, Math.min(2.0, 1 + rateVal / 100));
-                utterance.volume = Math.max(0, Math.min(1.0, 1 + volumeVal / 100));
-                utterance.pitch = Math.max(0.2, Math.min(2.0, 1 + pitchVal / 120));
-                state.subtitlesCueList = generateEstimatedSubtitles(text, rateVal);
+                utterance.rate = Math.max(0.25, Math.min(2.0, 1 + rate / 100));
+                utterance.volume = Math.max(0, Math.min(1.0, 1 + volume / 100));
+                utterance.pitch = Math.max(0.2, Math.min(2.0, 1 + pitch / 120));
+                state.lastSynthesis = synthesis;
+                state.subtitlesCueList = generateEstimatedSubtitles(text, rate);
                 state.currentUtterance = utterance;
 
                 const finish = error => {
@@ -1078,7 +1163,7 @@
                 utterance.onend = () => {
                     if (signal?.aborted) return;
                     stopVisualizer();
-                    setSynthesizingUI(false, `Playback complete (local voice: ${matchedVoice.name})`);
+                    setSynthesizingUI(false, `Local preview complete: ${voiceLabel}`);
                     finish();
                 };
 
@@ -1123,7 +1208,7 @@
         }
 
         // Only the current request may publish results or start a fallback engine.
-        async function handleSynthesizeAndPlay() {
+        async function handleSynthesizeAndPlay(previewVoice = null) {
             const text = document.getElementById("tts-text").value.trim();
             if (!text) {
                 showToast("请输入要合成语音的文字内容！", "warning");
@@ -1132,6 +1217,7 @@
 
             stopAllPlayback();
             clearAudioResult();
+            if (!previewVoice) setLocalPreviewOptions([]);
             const controller = new AbortController();
             const { signal } = controller;
             state.synthesisController = controller;
@@ -1142,31 +1228,34 @@
             const volumeStr = formatSignedParam(volume, "%");
             const pitchStr = formatSignedParam(pitch, "Hz");
 
-            document.getElementById("engine-status-tag").textContent = "Edge TTS";
-            setSynthesizingUI(true, `Requesting Edge TTS [${voice.ShortName}]...`);
-
+            let edgeError = null;
             try {
-                let result;
-                try {
-                    result = await synthesizeViaEdgeWebSocket(text, voice.ShortName, rateStr, volumeStr, pitchStr, signal);
-                } catch (error) {
+                if (!previewVoice) {
+                    document.getElementById("engine-status-tag").textContent = "Edge TTS";
+                    setSynthesizingUI(true, `Requesting Edge TTS [${voice.ShortName}]...`);
+                    let result;
+                    try {
+                        result = await synthesizeViaEdgeWebSocket(text, voice.ShortName, rateStr, volumeStr, pitchStr, signal);
+                    } catch (error) {
+                        edgeError = error;
+                    }
                     if (signal.aborted || state.synthesisController !== controller) return;
-                    document.getElementById("engine-status-tag").textContent = "Browser speech";
-                    setSynthesizingUI(true, `Edge TTS unavailable; using browser speech [${voice.ShortName}]...`);
-                    showToast("Edge TTS is unavailable. Trying a local voice; MP3 download is not available in this mode.", "warning");
-                    state.lastSynthesis = synthesis;
-                    await synthesizeViaBrowserSpeech(text, voice, rate, volume, pitch, signal);
-                    return;
+                    if (result) {
+                        state.subtitlesCueList = result.cues.length > 0 ? result.cues : generateEstimatedSubtitles(text, rate);
+                        synthesis.estimated = result.cues.length === 0;
+                        await playAudioBlob(result.blob, `Edge TTS ready [${voice.FriendlyName}]`, synthesis, signal);
+                        return;
+                    }
+                    document.getElementById("engine-status-tag").textContent = "Edge unavailable";
                 }
-                if (signal.aborted || state.synthesisController !== controller) return;
-                state.subtitlesCueList = result.cues.length > 0 ? result.cues : generateEstimatedSubtitles(text, rate);
-                synthesis.estimated = result.cues.length === 0;
-                await playAudioBlob(result.blob, `Edge TTS ready [${voice.FriendlyName}]`, synthesis, signal);
+                setSynthesizingUI(true, `Checking local voices for ${voice.Locale}...`);
+                await synthesizeViaBrowserSpeech(synthesis, signal, previewVoice);
             } catch (error) {
                 if (signal.aborted || state.synthesisController !== controller) return;
                 stopVisualizer();
-                setSynthesizingUI(false, `Synthesis failed: ${error.message}`);
-                showToast(error.message, "error");
+                const message = edgeError ? `${edgeError.message}. ${error.message}` : error.message;
+                setSynthesizingUI(false, `Synthesis failed: ${message}`);
+                showToast(message, "error");
             }
         }
 
@@ -1500,7 +1589,12 @@
             });
 
             // 7. 合成、停止、下载 MP3 与导出 VTT 字幕
-            document.getElementById("btn-synthesize").addEventListener("click", handleSynthesizeAndPlay);
+            document.getElementById("btn-synthesize").addEventListener("click", () => handleSynthesizeAndPlay());
+            document.getElementById("btn-preview-local").addEventListener("click", () => {
+                const index = document.getElementById("local-preview-voice").value;
+                const previewVoice = state.localPreviewVoices[index];
+                if (previewVoice) handleSynthesizeAndPlay(previewVoice);
+            });
             document.getElementById("btn-stop").addEventListener("click", stopAllPlayback);
 
             document.getElementById("btn-download-mp3").addEventListener("click", () => {
