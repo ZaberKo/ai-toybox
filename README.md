@@ -19,7 +19,7 @@ AI Toybox 是一个持续扩充的 AI 小工具实验集合。每个工具围绕
 
 ## 开发与验证
 
-首页和各工具都是 Vite 的独立 HTML 入口，工具列表由 [`routes.json`](routes.json) 维护。建议使用与 CI 一致的 Node.js 26 LTS 和 [`package.json`](package.json) 指定的 pnpm 版本。推送到 `main` 后，GitHub Actions 会按 pnpm 锁文件安装依赖，通过 Vitest 回归测试后发布 Vite 构建产物。
+首页和各工具都是 Vite 的独立 HTML 入口，工具清单在 [`vite.config.js`](vite.config.js) 中维护。建议使用与 CI 一致的 Node.js 26 LTS 和 [`package.json`](package.json) 指定的 pnpm 版本。推送到 `main` 后，GitHub Actions 会按 pnpm 锁文件安装依赖，通过 Vitest 回归测试后发布 Vite 构建产物。
 
 安装依赖并启动开发服务器：
 
@@ -36,20 +36,20 @@ pnpm build
 pnpm preview
 ```
 
-开发版从 `/edge_tts/` 打开语音工具，生产预览路径为 `/ai-toybox/edge_tts/`。本地 Vite 在同一个进程里提供网页和合成接口，使用所选音色、语速、音量和音调调用微软 Read Aloud 服务，无需额外的启动命令或 API Key。
+开发版从 `/edge_tts/` 打开语音工具，生产预览路径为 `/ai-toybox/edge_tts/`。
 
-GitHub Pages 上可以浏览音色、编辑文本和导出估算字幕。微软合成接口会拒绝普通浏览器的直连，真实音频合成通过本地 Vite 页面使用。
+语音工具由浏览器直接连接微软 Read Aloud 服务，使用所选音色和参数合成音频。微软会拒绝部分浏览器的握手，页面会报告连接失败。音色浏览和估算字幕导出可以独立使用。
 
 ## 加工具
 
-把工具页面放在对应目录的 `index.html`，然后在 `routes.json` 添加目录名和入口文件。例如：
+把工具页面放在对应目录的 `index.html`，然后在 `vite.config.js` 的 `routes` 对象中添加以目录名为键的条目。Vite 用目录名定位页面，并用同一条配置生成首页卡片。
 
-```json
-{
-  "keyboard_test": "keyboard_test/index.html",
-  "edge_tts": "edge_tts/index.html",
-  "my_tool": "my_tool/index.html"
-}
+```js
+my_tool: {
+    name: "My Tool",
+    description: "Describe what the tool does.",
+    category: "Utility"
+},
 ```
 
-发布后可从 [AI Toybox 首页](https://zaberko.github.io/ai-toybox/)打开新工具。工具使用的样式、模块脚本和图片可以在页面中直接引用，由 Vite 处理。需按原路径发布的静态文件可放到 `public/`。
+只有 `name` 必填。可用 `iconPath` 指定首页卡片图标的 SVG 路径。发布后可从 [AI Toybox 首页](https://zaberko.github.io/ai-toybox/)打开新工具。工具使用的样式、模块脚本和图片可以在页面中直接引用，由 Vite 处理。需按原路径发布的静态文件可放到 `public/`。

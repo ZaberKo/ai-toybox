@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { webcrypto } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { test } from "vitest";
 import vm from "node:vm";
@@ -7,11 +8,23 @@ const html = readFileSync(new URL("../../edge_tts/index.html", import.meta.url),
 const source = html.match(/<script id="edge-tts-app">([\s\S]*?)<\/script>/)[1];
 const chineseMessages = html.match(/<script type="application\/json" id="edge-tts-zh">([\s\S]*?)<\/script>/)[1];
 
-function createApp({ blockPlayback = false, pageUrl = "http://localhost:5173/edge_tts/", storedLanguage = "en" } = {}) {
+function createApp({ blockPlayback = false, storedLanguage = "en" } = {}) {
     const elements = new Map();
     const groups = new Map();
     const downloads = [];
+    const { promise: firstSocket, resolve: socketOpened } = Promise.withResolvers();
     let initialize;
+
+    class FakeWebSocket {
+        static CLOSING = 2;
+        readyState = 0;
+        sent = [];
+        constructor(url) { this.url = url; socketOpened(this); }
+        send(message) { this.sent.push(message); }
+        close() { this.readyState = 3; }
+        open() { this.readyState = 1; this.onopen(); }
+        receive(data) { this.onmessage({ data }); }
+    }
 
     function element(tag = "div") {
         const item = {
@@ -75,10 +88,10 @@ function createApp({ blockPlayback = false, pageUrl = "http://localhost:5173/edg
     elements.get("tts-text").value = html.match(/<textarea[^>]*id="tts-text"[^>]*>([\s\S]*?)<\/textarea>/)[1];
     elements.get("locale-filter").value = "ALL";
     const context = vm.createContext({
-        Blob, URL, AbortController, AbortSignal, DOMException, Uint8Array, atob,
-        setTimeout() {}, requestAnimationFrame() { return 1; }, cancelAnimationFrame() {},
+        Blob, URL, URLSearchParams, AbortController, AbortSignal, DOMException, Uint8Array, ArrayBuffer, DataView,
+        TextEncoder, TextDecoder, crypto: webcrypto, WebSocket: FakeWebSocket,
+        setTimeout() {}, clearTimeout() {}, requestAnimationFrame() { return 1; }, cancelAnimationFrame() {},
         window: {
-            location: new URL(pageUrl),
             localStorage: { getItem() { return storedLanguage; }, setItem(_, value) { storedLanguage = value; } },
             addEventListener(name, handler) { if (name === "DOMContentLoaded") initialize = handler; }
         },
@@ -95,13 +108,17 @@ function createApp({ blockPlayback = false, pageUrl = "http://localhost:5173/edg
     run("syncAllCloudVoices = async () => {};");
     initialize();
     return {
-        context, elements, downloads, groups, run, syncVoices,
+        context, elements, downloads, groups, run, syncVoices, firstSocket,
+        mockSynthesis(handler) {
+            context.testSynthesis = handler;
+            run("requestSynthesis = testSynthesis");
+        },
         cleanup() { run("stopAllPlayback(); clearAudioResult()"); }
     };
 }
 
-function audioResponse(voice) {
-    return { ok: true, json: async () => ({ voice, audio: "YXVkaW8=", cues: [] }) };
+function audioResult() {
+    return { blob: new Blob(["audio"], { type: "audio/mpeg" }), cues: [] };
 }
 
 test("sample selection preserves unmatched languages and manual text", () => {
@@ -124,17 +141,17 @@ test("sample selection preserves unmatched languages and manual text", () => {
     app.cleanup();
 });
 
-test("stopping aborts the HTTP request and prevents late playback", async () => {
+test("stopping aborts the synthesis and prevents late playback", async () => {
     const app = createApp();
     let signal;
     let reply;
-    app.context.fetch = (_, options) => new Promise(resolve => {
-        signal = options.signal;
+    app.mockSynthesis((_, voice, rate, volume, pitch, requestSignal) => new Promise(resolve => {
+        signal = requestSignal;
         reply = resolve;
-    });
+    }));
     const pending = app.run("handleSynthesizeAndPlay()");
     app.run("stopAllPlayback()");
-    reply(audioResponse("zh-CN-XiaoxiaoNeural"));
+    reply(audioResult());
     await pending;
     assert.equal(signal.aborted, true);
     assert.equal(app.run("state.lastAudioBlobUrl"), null);
@@ -165,7 +182,7 @@ test("a synthesis service error is shown for the selected voice without fallback
     let systemVoiceRequested = false;
     app.context.window.speechSynthesis = { speak() { systemVoiceRequested = true; } };
     app.run('selectVoice(state.voices.find(voice => voice.ShortName === "en-US-AvaMultilingualNeural"));');
-    app.context.fetch = async () => ({ ok: false, status: 502, json: async () => ({ error: "Edge connection failed" }) });
+    app.mockSynthesis(async () => { throw new Error("Edge connection failed"); });
     await app.run("handleSynthesizeAndPlay()");
     assert.equal(systemVoiceRequested, false);
     assert.equal(app.run("state.selectedVoice.ShortName"), "en-US-AvaMultilingualNeural");
@@ -211,49 +228,62 @@ test("catalog refresh discards malformed entries and escapes display text", asyn
     app.cleanup();
 });
 
-test("the preview sends the exact voice, text, and prosody to its same-origin API", async () => {
-    const app = createApp({ pageUrl: "http://localhost:4173/ai-toybox/edge_tts/" });
+test("the single page signs the handshake and sends the exact voice, text, and prosody to Microsoft", async () => {
+    const app = createApp();
+    assert.equal(await app.run("edgeHandshakeToken(1770000000000)"),
+        "00DDB33FD01602D8-87C1FE6B212DC02BD1C09F05EE72850D2069A3CC92C5F462FDD6DDE2B15E8B08");
     app.run('selectVoice({ ShortName: "sq-AL-AnilaNeural", Locale: "sq-AL" }); state.rate = 25; state.volume = -20; state.pitch = -100;');
     app.elements.get("tts-text").value = "Përshëndetje & <test>";
-    app.context.fetch = async (url, options) => {
-        assert.equal(url.href, "http://localhost:4173/ai-toybox/api/edge-tts");
-        assert.equal(options.method, "POST");
-        assert.deepEqual(JSON.parse(options.body), {
-            text: "Përshëndetje & <test>", voice: "sq-AL-AnilaNeural", rate: "+25%", volume: "-20%", pitch: "-100Hz"
-        });
-        return audioResponse("sq-AL-AnilaNeural");
-    };
-    await app.run("handleSynthesizeAndPlay()");
+    const pending = app.run("handleSynthesizeAndPlay()");
+    const socket = await app.firstSocket;
+    assert.equal(socket.url.hostname, "speech.platform.bing.com");
+    assert.match(socket.url.searchParams.get("Sec-MS-GEC"), /^[A-F0-9]{16}-[A-F0-9]{64}$/);
+    socket.open();
+    assert.match(socket.sent[0], /audio-24khz-48kbitrate-mono-mp3/);
+    assert.match(socket.sent[1], /\(sq-AL, AnilaNeural\)/);
+    assert.match(socket.sent[1], /rate="\+25%" volume="-20%" pitch="-100Hz"/);
+    assert.match(socket.sent[1], /Përshëndetje &amp; &lt;test&gt;/);
+    const header = new TextEncoder().encode("Path:audio\r\nContent-Type:audio/mpeg\r\n");
+    const frame = new Uint8Array(2 + header.length + 4);
+    new DataView(frame.buffer).setUint16(0, header.length);
+    frame.set(header, 2);
+    socket.receive(frame.buffer);
+    socket.receive("Path:turn.end\r\n\r\n");
+    await pending;
+    assert.equal(socket.readyState, 3);
     assert.equal(app.elements.get("btn-download-mp3").disabled, false);
-    app.context.fetch = async () => audioResponse("en-US-AvaNeural");
-    await app.run("handleSynthesizeAndPlay()");
-    assert.match(app.elements.get("status-message").textContent, /invalid result for the selected voice/);
-    assert.equal(app.elements.get("btn-download-mp3").disabled, true);
     app.cleanup();
 });
 
-test("a static deployment without the synthesis endpoint directs users to local Vite", async () => {
-    const app = createApp();
-    app.context.fetch = async url => {
-        assert.equal(url.href, "http://localhost:5173/api/edge-tts");
-        return { ok: false, status: 404, json: async () => { throw new SyntaxError("HTML response"); } };
-    };
-    await app.run("handleSynthesizeAndPlay()");
-    assert.match(app.elements.get("status-message").textContent, /local Vite server/);
-    app.cleanup();
+test("connection errors distinguish failed handshakes from interrupted synthesis", async () => {
+    for (const [connected, message] of [
+        [false, /Could not establish a browser connection/],
+        [true, /closed the connection before synthesis finished/]
+    ]) {
+        const app = createApp();
+        const pending = app.run("handleSynthesizeAndPlay()");
+        const socket = await app.firstSocket;
+        if (connected) socket.open();
+        socket.onerror();
+        await pending;
+        assert.equal(socket.readyState, 3);
+        assert.match(app.elements.get("status-message").textContent, message);
+        assert.equal(app.elements.get("btn-download-mp3").disabled, true);
+        app.cleanup();
+    }
 });
 
 test("switching voices cancels an in-flight synthesis", async () => {
     const app = createApp();
     let signal;
     let reply;
-    app.context.fetch = (_, options) => new Promise(resolve => {
-        signal = options.signal;
+    app.mockSynthesis((_, voice, rate, volume, pitch, requestSignal) => new Promise(resolve => {
+        signal = requestSignal;
         reply = resolve;
-    });
+    }));
     const pending = app.run("handleSynthesizeAndPlay()");
     app.run('selectVoice(state.voices.find(voice => voice.ShortName === "ja-JP-NanamiNeural"))');
-    reply(audioResponse("zh-CN-XiaoxiaoNeural"));
+    reply(audioResult());
     await pending;
     assert.equal(signal.aborted, true);
     assert.match(app.elements.get("status-message").textContent, /Ready to synthesize ja-JP-NanamiNeural/);
@@ -264,7 +294,7 @@ test("switching voices cancels an in-flight synthesis", async () => {
 test("autoplay rejection, pause, replay, and decode errors update playback state", async () => {
     for (const blockPlayback of [true, false]) {
         const app = createApp({ blockPlayback });
-        app.context.fetch = async () => audioResponse("zh-CN-XiaoxiaoNeural");
+        app.mockSynthesis(async () => audioResult());
         await app.run("handleSynthesizeAndPlay()");
         const audio = app.elements.get("audio-player");
         if (blockPlayback) {
@@ -285,7 +315,7 @@ test("autoplay rejection, pause, replay, and decode errors update playback state
 
 test("downloads use the generated voice and media extension until the voice changes", async () => {
     const app = createApp();
-    app.context.fetch = async () => audioResponse("zh-CN-XiaoxiaoNeural");
+    app.mockSynthesis(async () => audioResult());
     await app.run("handleSynthesizeAndPlay()");
     app.elements.get("btn-download-mp3").click();
     assert.match(app.downloads[0].download, /^zh-CN-XiaoxiaoNeural_\d+\.mp3$/);
@@ -348,11 +378,10 @@ test("every filter chooses its first visible voice and synthesis sends that voic
     app.groups.get(".cat-chip").find(button => button.getAttribute("data-cat") === "Multilingual").click();
     assertFirstVoice("en-US-AndrewMultilingualNeural");
     const requests = [];
-    app.context.fetch = async (_, options) => {
-        const { voice } = JSON.parse(options.body);
+    app.mockSynthesis(async (_, voice) => {
         requests.push(voice);
-        return audioResponse(voice);
-    };
+        return audioResult();
+    });
     await app.elements.get("btn-synthesize").click();
     assert.deepEqual(requests, ["en-US-AndrewMultilingualNeural"]);
     app.cleanup();
@@ -363,12 +392,12 @@ test("empty results clear selection and cancel pending audio without sending ano
     let signal;
     let reply;
     let requests = 0;
-    app.context.fetch = (_, options) => {
+    app.mockSynthesis((_, voice, rate, volume, pitch, requestSignal) => {
         requests++;
-        if (requests !== 1) return Promise.resolve(audioResponse("zh-CN-XiaoxiaoNeural"));
-        signal = options.signal;
+        if (requests !== 1) return Promise.resolve(audioResult());
+        signal = requestSignal;
         return new Promise(resolve => { reply = resolve; });
-    };
+    });
     const pending = app.elements.get("btn-synthesize").click();
     const search = app.elements.get("voice-search");
     search.value = "no matching voice";
@@ -378,7 +407,7 @@ test("empty results clear selection and cancel pending audio without sending ano
     assert.equal(app.elements.get("current-selected-badge").textContent, "No voice selected");
     assert.equal(app.elements.get("synthesis-voice-id").value, "");
     assert.equal(app.elements.get("btn-copy-voice-id").disabled, true);
-    reply(audioResponse("zh-CN-XiaoxiaoNeural"));
+    reply(audioResult());
     await pending;
     await app.elements.get("btn-synthesize").click();
     assert.equal(requests, 1);
@@ -428,11 +457,9 @@ test("the interface defaults to Chinese and switching languages keeps the synthe
     text.handlers.input();
     const voice = app.run("state.selectedVoice.ShortName");
     assert.equal(voice, "en-US-AvaNeural");
-    app.context.fetch = async () => ({ ok: false, status: 502, json: async () => ({
-        error: "The Microsoft speech service could not synthesize the selected voice."
-    }) });
+    app.mockSynthesis(async () => { throw new Error("The Microsoft speech service returned no audio."); });
     await app.elements.get("btn-synthesize").click();
-    assert.match(app.elements.get("status-message").textContent, /微软语音服务无法合成/);
+    assert.match(app.elements.get("status-message").textContent, /微软语音服务没有返回音频/);
 
     language.value = "en";
     language.handlers.change({ target: language });
@@ -450,7 +477,7 @@ test("the interface defaults to Chinese and switching languages keeps the synthe
 
 test("a delayed pause event does not replace the stopped status", async () => {
     const app = createApp();
-    app.context.fetch = async () => audioResponse("zh-CN-XiaoxiaoNeural");
+    app.mockSynthesis(async () => audioResult());
     await app.run("handleSynthesizeAndPlay()");
     app.run("stopAllPlayback()");
     app.elements.get("audio-player").emit("pause");
@@ -460,9 +487,9 @@ test("a delayed pause event does not replace the stopped status", async () => {
 
 test("WebVTT exports input as plain cue text", async () => {
     const app = createApp();
-    app.context.fetch = async () => ({ ok: true, json: async () => ({
-        voice: "zh-CN-XiaoxiaoNeural", audio: "YXVkaW8=", cues: [{ offset: 0, duration: 0.2, text: "<b>one & two</b>\nthree" }]
-    }) });
+    app.mockSynthesis(async () => ({
+        ...audioResult(), cues: [{ offset: 0, duration: 0.2, text: "<b>one & two</b>\nthree" }]
+    }));
     await app.run("handleSynthesizeAndPlay()");
     app.elements.get("btn-download-vtt").click();
     const [{ href }] = app.downloads;
@@ -472,6 +499,6 @@ test("WebVTT exports input as plain cue text", async () => {
 });
 
 test("the tool exposes only Edge cloud synthesis and media controls", () => {
-    assert.doesNotMatch(html, /custom-api|api-mode-select|speechSynthesis|code-preview-content|chk-subtitles|new WebSocket|desktop Microsoft Edge|engine-status-tag|VITE_EDGE_TTS_API_URL/);
+    assert.doesNotMatch(html, /custom-api|api-mode-select|speechSynthesis|code-preview-content|chk-subtitles|desktop Microsoft Edge|engine-status-tag|VITE_EDGE_TTS_API_URL|\/api\/edge-tts/);
     assert.doesNotMatch(html, /<a\b[^>]*href="https:\/\/github\.com\/rany2\/edge-tts"/);
 });

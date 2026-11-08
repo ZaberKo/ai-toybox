@@ -1,17 +1,16 @@
 import assert from "node:assert/strict";
 import { build } from "vite";
 import { test } from "vitest";
-import routes from "../../routes.json" with { type: "json" };
 
-test("Vite emits every registered tool at its GitHub Pages URL", async () => {
+test("Vite emits the keyboard and speech tools at their GitHub Pages URLs", async () => {
     const { output } = await build({ logLevel: "silent", build: { write: false } });
     const files = new Map(output.map(asset => [asset.fileName, asset.source]));
     const homepage = files.get("index.html");
     assert.ok(homepage);
     assert.doesNotMatch(homepage, /<!-- TOOL_/);
 
-    for (const [route, entry] of Object.entries(routes)) {
-        assert.ok(files.has(entry), `Missing page for ${route}`);
+    for (const route of ["keyboard_test", "edge_tts"]) {
+        assert.ok(files.has(`${route}/index.html`), `Missing page for ${route}`);
         assert.ok(homepage.includes(`href="${route}/"`), `Missing homepage link for ${route}`);
     }
 
@@ -21,5 +20,4 @@ test("Vite emits every registered tool at its GitHub Pages URL", async () => {
     const edgeTool = files.get("edge_tts/index.html");
     assert.match(edgeTool, /<script id="edge-tts-app">/);
     assert.doesNotMatch(edgeTool, /<script[^>]+src="\/ai-toybox\//, "The speech tool should keep its JavaScript inline");
-    assert.deepEqual(JSON.parse(files.get("routes.json")), routes);
 });

@@ -492,21 +492,14 @@
             "Synced ({count})": "已同步（{count}）",
             "Could not refresh the Edge voice catalog. The previous list is still available.": "无法刷新 Edge 音色库，仍可使用之前的列表。",
             "Voice catalog ({count})": "音色库（{count}）",
-            "Open this tool through the local Vite server to synthesize audio.": "请通过本地 Vite 服务打开此工具以合成音频。",
-            "The synthesis service could not be reached.": "无法连接语音合成服务。",
-            "The synthesis request failed.": "语音合成请求失败。",
-            "The synthesis service returned an invalid result for the selected voice.": "语音合成服务返回了无效结果。",
-            "Open the tool on the same origin as the Vite server.": "请通过 Vite 服务的同源地址打开此工具。",
-            "Use POST for synthesis requests.": "语音合成请求必须使用 POST。",
-            "Send the synthesis request as JSON.": "语音合成请求必须使用 JSON。",
-            "The synthesis service is busy. Try again shortly.": "语音合成服务繁忙，请稍后重试。",
-            "The synthesis request exceeds 64 KiB.": "语音合成请求超过 64 KiB。",
-            "Invalid synthesis JSON.": "语音合成请求的 JSON 无效。",
-            "Provide text, an Edge voice ID, and valid prosody parameters.": "请提供文本、Edge 音色 ID 和有效的合成参数。",
+            "Open the page in a secure context to synthesize audio.": "请通过 HTTPS 或本机地址打开页面以合成音频。",
+            "Could not establish a browser connection to the Microsoft speech service.": "无法与微软语音服务建立浏览器连接。",
+            "The connection to the Microsoft speech service timed out.": "连接微软语音服务超时。",
+            "The Microsoft speech service stopped sending data.": "微软语音服务停止发送数据。",
+            "The Microsoft speech service closed the connection before synthesis finished.": "微软语音服务在合成完成前关闭了连接。",
+            "The Microsoft speech service returned an invalid audio frame.": "微软语音服务返回了无效的音频帧。",
+            "The Microsoft speech service returned no audio.": "微软语音服务没有返回音频。",
             "Enter text that can be synthesized.": "请输入可合成的文本。",
-            "The synthesized audio is too large.": "合成的音频文件过大。",
-            "Synthesis took too long. Try a shorter passage.": "合成超时，请尝试使用较短的文本。",
-            "The Microsoft speech service could not synthesize the selected voice.": "微软语音服务无法合成所选音色。",
             "Enter text to synthesize.": "请输入要合成的文本。",
             "Requesting Edge TTS [{voice}]...": "正在使用 Edge TTS 合成 [{voice}]…",
             "Edge TTS ready [{voice}]": "正在播放 Edge TTS 音频 [{voice}]。",
@@ -1057,36 +1050,228 @@
          * ============================================================================
          */
         const EDGE_CLIENT_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
-        async function requestSynthesis(text, voice, rate, volume, pitch, signal) {
-            const endpoint = new URL("../api/edge-tts", window.location.href);
-            const localPageMessage = "Open this tool through the local Vite server to synthesize audio.";
-            if (endpoint.protocol === "file:") throw new Error(localPageMessage);
-            let response;
-            try {
-                response = await fetch(endpoint, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ text, voice, rate, volume, pitch }),
-                    signal
-                });
-            } catch (error) {
-                if (signal.aborted) throw error;
-                throw new Error("The synthesis service could not be reached.");
+        const EDGE_SOCKET_URL = "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1";
+        const EDGE_PROTOCOL_VERSION = "2-143.0.3650.75";
+        const EDGE_TEXT_BYTES = 4096;
+
+        /*
+         * CS64 handshake checksum adapted from MsEdgeTTS 2.1.1.
+         * MIT License
+         * Copyright (c) 2023 Migushthe2nd
+         *
+         * Permission is hereby granted, free of charge, to any person obtaining a copy
+         * of this software and associated documentation files (the "Software"), to deal
+         * in the Software without restriction, including without limitation the rights
+         * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+         * copies of the Software, and to permit persons to whom the Software is
+         * furnished to do so, subject to the following conditions:
+         *
+         * The above copyright notice and this permission notice shall be included in all
+         * copies or substantial portions of the Software.
+         *
+         * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+         * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+         * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+         * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+         * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+         * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+         * SOFTWARE.
+         */
+        function cs64(message, digest) {
+            const firstSwap = [0xef0569fb, 0x76f50f34, 0xc3efea97];
+            const secondSwap = [0xc31713db, 0x1881ce3c, 0x35bd1ec9];
+            const firstMix = [0xcf98b111, 0x87085b9f, 0x12ceb96d, 0x257e1d83];
+            const secondMix = [0xa27416f5, 0xd38396ff, 0x7c932b89, 0xbfa49f69];
+            const swap = value => (value << 16) | (value >>> 16);
+            const swapTerm = (word, key, [wordFactor, sumFactor, productFactor]) => {
+                const sum = Math.imul(word, key) + Math.imul(swap(word), wordFactor);
+                const product = Math.imul(swap(sum), sumFactor);
+                return Math.imul(swap(product), productFactor) + product;
+            };
+            const mixTerm = (value, factors) => factors.reduce((result, factor) => Math.imul(swap(result), factor), value);
+            const keys = new DataView(digest);
+            const firstKey = keys.getUint32(0, true) | 1;
+            const secondKey = keys.getUint32(4, true) | 1;
+            const padded = new Uint8Array(Math.ceil(message.length / 8) * 8);
+            padded.set(message);
+            const words = new DataView(padded.buffer);
+            let swapSum = 0;
+            let lastSwap = 0;
+            let mix = 0;
+            let mixSum = 0;
+            for (let offset = 0; offset < padded.length; offset += 8) {
+                const first = words.getUint32(offset, true);
+                const second = words.getUint32(offset + 4, true);
+                lastSwap = swapTerm(second, secondKey, secondSwap);
+                swapSum = (swapSum + swapTerm(first, firstKey, firstSwap) + lastSwap) >>> 0;
+                mix = mixTerm(Math.imul(mix + first, firstKey), firstMix);
+                mixSum = (mixSum + mix) >>> 0;
+                mix = mixTerm(Math.imul(mix + second, secondKey), secondMix);
+                mixSum = (mixSum + mix) >>> 0;
             }
-            const result = await response.json().catch(() => null);
-            if (!response.ok) {
-                if (!result && [404, 405].includes(response.status)) {
-                    throw new Error(localPageMessage);
+            const checksum = new DataView(new ArrayBuffer(8));
+            checksum.setUint32(0, lastSwap ^ mix, true);
+            checksum.setUint32(4, swapSum ^ mixSum, true);
+            return checksum.buffer;
+        }
+
+        async function edgeHandshakeToken(now = Date.now()) {
+            if (!crypto.subtle) throw new Error("Open the page in a secure context to synthesize audio.");
+            const seconds = Math.floor(now / 1000) + 11644473600;
+            const ticks = BigInt(seconds - seconds % 300) * 10000000n;
+            const message = new TextEncoder().encode(`Copyright (C) Microsoft Corporation. All rights reserved.${ticks}${EDGE_CLIENT_TOKEN}`);
+            const digest = await crypto.subtle.digest("SHA-256", message);
+            const hex = buffer => Array.from(new Uint8Array(buffer), value => value.toString(16).padStart(2, "0")).join("").toUpperCase();
+            return `${hex(cs64(message, digest))}-${hex(digest)}`;
+        }
+
+        function splitSynthesisText(text) {
+            const encoder = new TextEncoder();
+            const chunks = [];
+            let chunk = "";
+            let bytes = 0;
+            const cleaned = text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, " ");
+            function append(escaped, size) {
+                if (bytes + size > EDGE_TEXT_BYTES) {
+                    if (chunk.trim()) chunks.push(chunk);
+                    chunk = "";
+                    bytes = 0;
                 }
-                throw new Error(result?.error || "The synthesis request failed.");
+                chunk += escaped;
+                bytes += size;
             }
-            if (result?.voice !== voice || typeof result.audio !== "string" || !result.audio || !Array.isArray(result.cues)) {
-                throw new Error("The synthesis service returned an invalid result for the selected voice.");
+            for (const word of cleaned.match(/\S+\s*|\s+/gu) || []) {
+                const escaped = escapeXml(word);
+                const size = encoder.encode(escaped).length;
+                if (size <= EDGE_TEXT_BYTES) {
+                    append(escaped, size);
+                    continue;
+                }
+                for (const character of word) {
+                    const escapedCharacter = escapeXml(character);
+                    append(escapedCharacter, encoder.encode(escapedCharacter).length);
+                }
             }
-            const binary = atob(result.audio);
-            const audio = new Uint8Array(binary.length);
-            for (let index = 0; index < binary.length; index++) audio[index] = binary.charCodeAt(index);
-            return { blob: new Blob([audio], { type: "audio/mpeg" }), cues: result.cues };
+            if (chunk.trim()) chunks.push(chunk);
+            return chunks;
+        }
+
+        function edgeHeader(headers, name) {
+            const line = headers.split("\r\n").find(value => value.toLowerCase().startsWith(`${name}:`));
+            return line?.slice(name.length + 1).trim();
+        }
+
+        function requestEdgeTurn(url, ssml, signal) {
+            signal.throwIfAborted();
+            return new Promise((resolve, reject) => {
+                const socket = new WebSocket(url);
+                socket.binaryType = "arraybuffer";
+                const audio = [];
+                const cues = [];
+                const decoder = new TextDecoder();
+                let timeout;
+                let connected = false;
+
+                function finish(error) {
+                    clearTimeout(timeout);
+                    signal.removeEventListener("abort", onAbort);
+                    socket.onopen = socket.onmessage = socket.onerror = socket.onclose = null;
+                    if (socket.readyState < WebSocket.CLOSING) socket.close();
+                    if (error) reject(error);
+                    else resolve({ blob: new Blob(audio, { type: "audio/mpeg" }), cues });
+                }
+
+                const onAbort = () => finish(signal.reason);
+                const fail = message => finish(new Error(message));
+                function armTimeout(delay, message) {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => fail(message), delay);
+                }
+                const waitForAudio = () => armTimeout(60000, "The Microsoft speech service stopped sending data.");
+                signal.addEventListener("abort", onAbort, { once: true });
+                armTimeout(10000, "The connection to the Microsoft speech service timed out.");
+                socket.onerror = socket.onclose = () => fail(connected
+                    ? "The Microsoft speech service closed the connection before synthesis finished."
+                    : "Could not establish a browser connection to the Microsoft speech service.");
+                socket.onopen = () => {
+                    connected = true;
+                    waitForAudio();
+                    try {
+                        const timestamp = new Date().toString();
+                        const config = { context: { synthesis: { audio: {
+                            metadataoptions: { sentenceBoundaryEnabled: "false", wordBoundaryEnabled: "true" },
+                            outputFormat: "audio-24khz-48kbitrate-mono-mp3"
+                        } } } };
+                        socket.send(`X-Timestamp:${timestamp}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n${JSON.stringify(config)}`);
+                        const requestId = crypto.randomUUID().replaceAll("-", "");
+                        socket.send(`X-RequestId:${requestId}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:${timestamp}Z\r\nPath:ssml\r\n\r\n${ssml}`);
+                    } catch (error) {
+                        finish(error);
+                    }
+                };
+                socket.onmessage = ({ data }) => {
+                    waitForAudio();
+                    try {
+                        if (typeof data === "string") {
+                            const separator = data.indexOf("\r\n\r\n");
+                            if (separator < 0) return;
+                            const path = edgeHeader(data.slice(0, separator), "path");
+                            if (path === "turn.end") {
+                                if (audio.length) finish();
+                                else fail("The Microsoft speech service returned no audio.");
+                            } else if (path === "audio.metadata") {
+                                const metadata = JSON.parse(data.slice(separator + 4)).Metadata;
+                                for (const item of metadata ?? []) {
+                                    const boundary = item?.Data;
+                                    if (item?.Type !== "WordBoundary" || !Number.isFinite(boundary?.Offset) || boundary.Offset < 0
+                                        || !Number.isFinite(boundary?.Duration) || boundary.Duration <= 0 || typeof boundary?.text?.Text !== "string") continue;
+                                    cues.push({ offset: boundary.Offset / 10000, duration: boundary.Duration / 10000, text: boundary.text.Text });
+                                }
+                            }
+                            return;
+                        }
+                        if (data.byteLength < 2) throw new Error("The Microsoft speech service returned an invalid audio frame.");
+                        const headerLength = new DataView(data).getUint16(0);
+                        const audioStart = headerLength + 2;
+                        if (audioStart > data.byteLength) throw new Error("The Microsoft speech service returned an invalid audio frame.");
+                        const header = decoder.decode(new Uint8Array(data, 2, headerLength));
+                        if (edgeHeader(header, "path") === "audio" && edgeHeader(header, "content-type") === "audio/mpeg" && audioStart < data.byteLength) {
+                            audio.push(data.slice(audioStart));
+                        }
+                    } catch (error) {
+                        finish(error);
+                    }
+                };
+            });
+        }
+
+        async function requestSynthesis(text, voice, rate, volume, pitch, signal) {
+            const chunks = splitSynthesisText(text);
+            if (!chunks.length) throw new Error("Enter text that can be synthesized.");
+            const parts = [];
+            const cues = [];
+            let bytes = 0;
+            const separator = voice.lastIndexOf("-");
+            const voiceName = escapeXml(`Microsoft Server Speech Text to Speech Voice (${voice.slice(0, separator)}, ${voice.slice(separator + 1)})`);
+            for (const chunk of chunks) {
+                signal.throwIfAborted();
+                const token = await edgeHandshakeToken();
+                signal.throwIfAborted();
+                const url = new URL(EDGE_SOCKET_URL);
+                url.search = new URLSearchParams({
+                    TrustedClientToken: EDGE_CLIENT_TOKEN,
+                    "Sec-MS-GEC": token,
+                    "Sec-MS-GEC-Version": EDGE_PROTOCOL_VERSION,
+                    ConnectionId: crypto.randomUUID().replaceAll("-", "")
+                });
+                const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US"><voice name="${voiceName}"><prosody rate="${rate}" volume="${volume}" pitch="${pitch}">${chunk}</prosody></voice></speak>`;
+                const turn = await requestEdgeTurn(url, ssml, signal);
+                // At 48 kbps, each millisecond of audio contains six bytes.
+                for (const cue of turn.cues) cues.push({ ...cue, offset: cue.offset + bytes / 6 });
+                parts.push(turn.blob);
+                bytes += turn.blob.size;
+            }
+            return { blob: new Blob(parts, { type: "audio/mpeg" }), cues };
         }
 
         // Estimate subtitle timing when no real word boundaries are available.
